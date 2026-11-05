@@ -55,22 +55,22 @@ and skill practices, the same cases in both languages.
    skill, notebook tests and tutorials, and the conformance corpora.
 2. **Transforms**, and composites.
 3. **The session**: candidates, steps, policies.
-4. **The trace**, and reruns (question 3).
+4. **The trace**, and reruns (Decided, 3).
 5. **Release.**
 
-## Questions for the user
+## Decided
 
 1. **Its version.**
    - (a) 0.1.0, a new package's first.
    - (b) 0.10.0, continuing the precursor's series.
-   - *Recommended: (a).* No one depends on its version yet, and below 1.0 every breaking change bumps the minor anyway
+   - **Decided: (a)** (the user, 2026-11-05, accepting the recommendation). No one depends on its version yet, and below 1.0 every breaking change bumps the minor anyway
      ([PRI-031: the version is the contract](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-031)).
 2. **Rewrites: mutations as queries, or code?**
    - (a) A rewrite is a mutation expression of mbse-schemas
      ([FEA-027: mutations as queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-027.md)),
      data held by the transform.
    - (b) A rewrite is code, a function given the store, the match and the arguments, as in the precursor.
-   - *Recommended: (a).* "No model should need code to read or write. Ever."
+   - **Decided: (a)** (the user, 2026-11-05, accepting the recommendation). "No model should need code to read or write. Ever."
      ([PRI-018: no model needs code to read or write](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-018)).
      A rewrite as data can be traced, undone and inverted
      ([CAP-079: steps undone](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-079.md),
@@ -78,7 +78,7 @@ and skill practices, the same cases in both languages.
      Against it: the executor evaluates no expression yet (Risks), and whether mbse-codegen-python's rewrites can all
      be written so is to be checked.
 3. **Reruns in the first release?** Reruns that reuse earlier decisions, with orphans and trace diffs (CAP-076).
-   - *Recommended: yes, in stage 4.* The precursor met it, and mbse-codegen-python uses it.
+   - **Decided: yes, in stage 4** (the user, 2026-11-05, accepting the recommendation). The precursor met it, and mbse-codegen-python uses it.
 
 ## Risks
 
