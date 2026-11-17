@@ -75,33 +75,27 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    `session.ranked(policy)`, ranks them by a policy (the precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
    queried again, and termination is relative to the stream. The caller takes a candidate by applying it with its own
    visitors.
-5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): the parameter
-   assignments that an earlier history's transform certificates recorded reused where the same transform applies to the same
+5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)), queries over
+   the certificates (stage 4, below): the parameter assignments that an earlier history's transform certificates recorded
+   reused where the same transform applies to the same
    frame, the earlier ones that no longer apply reported (orphans), and two histories compared (added, removed,
    changed).
 
-## Stage 4: reruns and diffs (a design, for review)
+## Stage 4: reruns and diffs, queries over the certificates
 
-[CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md):
-the parameter assignments an earlier transform certificate recorded reused where the same transform applies to the same
-frame, and two histories' transform certificates compared. Only a transform is parametric; a history, a certificate, a
-transaction, a change and a journal record values and declare no parameter. Two calls, and nothing else:
+[CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md) needs
+no code of mbse-transforms'. A transform certificate already records its transform, its parameter assignments and its
+sub-certificates' frames ("ofc those parameters must be recorded in the transform certificate"), and certificates are
+mbse-schemas data. So a rerun's reuse is a query: the transform certificate, in an earlier history, of the same
+transform on the same frame, and the parameter assignments it recorded. A diff is the same query over two histories,
+their transform certificates compared by mbse-schemas' `Comparison`: added, removed (the orphans), and changed (other
+parameter assignments recorded). Calls of mbse-transforms' own for either would be bespoke code reading a model, which
+"No model should need bespoke schema-aware code to read or write. Use mbse-schemas built-in serialization support."
+rules out. Only a transform is parametric; a history, a certificate, a transaction, a change and a journal record values
+and declare no parameter.
 
-1. **`reused(store, history, candidate)`**: the parameter assignments recorded by the transform certificate, in the
-   history named `history` in the certificates' store `store`, of `candidate`'s transform on `candidate`'s frame, or
-   none where the history holds no such certificate. The caller then applies and certifies the candidate with them, `by` `"reused"`, as with any decision of its
-   own; nothing is taken for it.
-2. **`diff(store, earlier, later)`**: two histories compared, their transform certificates matched by transform and
-   pattern instance: **added**, in the later history only; **removed**, in the earlier history only, which are the
-   orphans, earlier decisions that no longer apply; **changed**, in both, the two certificates having recorded other parameter assignments.
-
-*(agent)* A transform is the same where its object reference is equal; a frame is the same where its pattern instance
-is equal as a value (its pattern and the object references its symbols bind, compared by mbse-schemas' `Comparison`),
-so that a rerun over a store made again with the same owners and keys matches the earlier frames.
-
-Not in it: no loop that reuses or takes candidates by itself; no filter that excludes frames ("In a streaming system
-termination conditions are relative"); no defaulted parameter; no certificate of a new kind, `"reused"` being a value
-of the history certificate's provenance, `by`.
+Stage 4 is the cases that show it, with mbse-schemas' queries and `Comparison` alone; where a query cannot match what a
+certificate recorded, that is a gap of mbse-schemas', reported (PRI-032).
 
 ## Not in it
 
