@@ -49,7 +49,7 @@ transforms yet. For the data transforms rewrite, use the
    and your patterns, then `Transforms.install`. Each pattern is named, and installed after the schemas it ranges over,
    in this store and in every store whose frames are its frames. The prototype declares the transform's parameters
    through `Parametrics`. `Transforms.define(txn, name, procedure, prototype, frames, verify)` writes the transform,
-   owned by the catalog under its name: `frames` maps each role it takes (`source`, `sync`, `target`) to its frame's
+   owned by the catalog under its name: `frames` maps each argument it takes (`source`, `sync`, `target`) to its frame's
    pattern, the prototype being the source's, else the sync's; `verify` is `"falsified"`, `"metric"` or None.
    [CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md).
    - Python: [XF-01: A transform's anatomy: its name, prototype, frames' patterns, parameters, procedure and verification, defined as data](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-01)
@@ -57,58 +57,66 @@ transforms yet. For the data transforms rewrite, use the
    certificate records: "Discrete decisions in a transformation procedure must themselves be modeled as discrete
    transforms with non-overlapping patterns." *When*: every procedure. *How*: register a native function under the
    name the transform gives, in a `Transforms.Procedures` you make (`register(name, procedure, metric=...)`), as
-   `procedure(source, sync, target, arguments)`. Each frame is a `Visitors.OfPattern`, or None where the transform
+   `procedure(source, sync, target, assignments)`. Each frame is a `Visitors.OfPattern`, or None where the transform
    takes none: its symbols are members, each the visitor of the object it binds. Read the source; write the sync and
    the target through their stores' builders (`Proxies.store_of(member).<schema>(member, ...)`). Branch on data only
-   deterministically, take every choice from `arguments`, and keep nothing: each frame, and every visitor in it, is
+   deterministically, take every choice from `assignments`, and keep nothing: each frame, and every visitor in it, is
    refused once the application ends. A write to the source is rolled back.
    - Python: [XF-02: Procedures are registered by name, each once; an unknown name is refused before anything runs](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-02)
    - Python: [XF-03: Frames are presented as `Visitors.OfPattern`: its pattern, as the frame's store holds it, and its symbols as members, each the visitor of the object it binds](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-03)
    - Python: [XF-09: Lifetimes: a procedure keeps nothing it was given; its frames and every visitor in them are refused once the application ends, and one that raises writes nothing](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-09)
 4. **Apply a transform to frames already bound, and read its certificates.** *Why*: each application is one step,
    recorded with its parameters, who decided them and the pattern instances it took, so that it is audited, compared
-   and reused. *When*: a step outside a session, or to understand what a session does; a session makes these calls. *How*: bind each frame by a
-   transaction of its store (a map of its pattern), and call `Transforms.apply(store, name, arguments, history,
-   procedures, source=Transforms.Bound(store, frame), ...)`, giving every parameter a value and `by` who decided it.
+   and reused. *When*: a step outside a session, or to understand what a session does; a session makes these calls.
+   *How*: bind each frame by a transaction of its store (a map of its pattern), and call `Transforms.apply(store,
+   name, assignments, history, procedures, source=Transforms.Bound(store, frame), ...)`, assigning every parameter a
+   value and giving `by`, who decided them.
    The source's store holds no other frame, and the certificates' store none. It gives back the transform
    certificate's reference. The history certificate (`Transforms.TheHistories`, by name) holds the steps in order and
-   who decided each; a transform certificate its arguments, its transform and prototype, and `prev` and `next`; a
+   who decided each; a transform certificate its assignments, its transform and prototype, and `prev` and `next`; a
    sub-certificate per frame its pattern instance, a `References.OfFrame`, and the step before it on that instance.
    Where the transform verifies, falsification (the prototype held for the sync frame before, and no longer) or a
    metric that decreased, a failure writes no certificate.
    [CAP-075: steps linked to what they matched and wrote](mbse:mbse-basis/docs/capabilities/CAP-075.md).
    - Python: [XF-04: The source is read-only: what a procedure writes there is rolled back, the source undisturbed; the target is constructive, and the sync and the target may share a store](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-04)
-   - Python: [XF-05: Parameters: every one the prototype declares is given a value, and no other; the transform certificate records them, and the history who decided them](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-05)
+   - Python: [XF-05: Parameters: every one the prototype declares is assigned a value, and no other; the transform certificate records them, and the history who decided them](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-05)
    - Python: [XF-06: Certificates are written and linked: the history's sequence, prev and next, a sub-certificate for each frame present holding its pattern instance, and the chain of each pattern instance; all of it data, written and read back as any](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-06)
    - Python: [XF-07: Verification by falsification: the prototype holds for the sync frame before, and no longer after; where it still holds, no certificate is written](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-07)
    - Python: [XF-08: Verification by a metric: registered with the procedure, computed before and after it; where it does not decrease, nothing is written](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-08)
    - Python: [XF-10: What an application refuses: a transform not defined or ill-defined, frames that are not the transform's, stores shared where they must not be, and a frame its store cannot bind](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-10)
-5. **Run a session, and let a policy decide only what you chose it to.** *Why*: a session offers every choice as a
-   candidate, so that each decision is the caller's or a policy's the caller chose, and recorded as such
-   ([PRI-014: every ambiguity a decision](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-014)); it keeps the source
-   undisturbed and binds every frame, so a procedure never sees how. *When*: applying transforms to a model, instead
-   of binding frames and calling the application yourself. *How*: make `Transforms.Session(store, names, history,
-   procedures, source=..., target=...)`: the certificates' store, the transforms in the order that breaks ties, a
-   history of its own (begun empty), the store to rewrite, and, where a transform takes a target, your target store,
-   holding its pattern's one frame. The session copies the source into `session.sync`, the store that the transforms
-   with a sync edit and you read the result from. `candidates()` gives each match of each prototype not yet taken, once
-   per value of each finite parameter (a `bool`, or a union of options, empty value objects named by their branches),
-   other parameters open, in a canonical order; `answer(**values)` fills the open ones, and `take(candidate)` applies
-   it as the caller's decision. To let a policy decide, make `Transforms.Policy(Transforms.Clause(transform,
-   arguments, weight), ...)`, each clause naming transforms by `Transforms.reference(store, name)`, one or several,
-   with the arguments it prefers and answers; `candidates(policy)` ranks by it, as a recommendation, and `run(policy)`
-   takes its first candidate until none scores above 0 or it cannot answer an open parameter, leaving the rest to you.
-   The history certificate records who decided each step. A match is taken once per transform, the history telling
-   which; a sync's match also leaves when a step changes it.
+5. **Run a session over a frame stream, and let a policy decide only what you chose it to.** *Why*: a session offers
+   every choice as a candidate, so that each decision is the caller's or a policy's the caller chose, and recorded as
+   such ([PRI-014: every ambiguity a decision](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-014)); it keeps the source
+   undisturbed and binds every argument, so a procedure never sees how. Its candidates are a filter fed by a frame
+   stream, which it consumes, so that what it offers, and when it is done, is relative to what you feed it. *When*:
+   applying transforms to a model, instead of binding frames and calling the application yourself. *How*: make
+   `Transforms.Session(store, names, history, procedures, source=..., target=..., frames=..., over=...)`: the
+   certificates' store, the transforms in the order that breaks ties, a history of its own (begun empty), the store to
+   rewrite, where a transform takes a target your target store, holding its pattern's one frame, and the frames to
+   consider, a map of a pattern over the store `over` (the source by default) as its transaction gives them back, a
+   list or any iterable; without them, by default, each transform's prototype mapped over the source. `feed(frames,
+   over)` extends the stream later, with frames of any store whose objects share their paths, such as `session.sync`,
+   the copy of the source that the transforms with a sync edit and you read the result from. Each frame is offered to
+   each transform whose prototype's symbols it binds, once per value of each finite parameter (a `bool`, or a union of
+   options, empty value objects named by their branches), other parameters open: `candidates()` gives those pending,
+   in a canonical order; `answer(**values)` assigns the open ones, `take(candidate)` applies it as the caller's
+   decision, and `skip(candidate)` leaves it. A frame is offered once: feed it again to have it offered again, or make
+   the session with `exclude_taken=True` to leave out what its history took. To let a policy decide, make
+   `Transforms.Policy(Transforms.Clause(transform, assignments, weight), ...)`, each clause naming transforms by
+   `Transforms.reference(store, name)`, one or several, with the parameter assignments it prefers and answers;
+   `candidates(policy)` ranks by it, as a recommendation, and `run(policy)` takes its first candidate until none
+   pending scores above 0 and the stream is drained, or it cannot answer an open parameter, leaving the rest to you.
+   The history certificate records who decided each step.
    [CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md).
-   - Python: [SES-01: Candidates: each match of a transform's prototype, once per combination of its finite parameters' values (a bool's; a union of options' names), any other parameter left open; in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-01)
-   - Python: [SES-02: Open parameters are answered; a candidate with an open parameter, or one the session does not offer, is refused](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-02)
-   - Python: [SES-03: Taking a candidate: the session binds its frames and applies its transform, by the caller's decision; resolution is linear, the candidates found again after each step](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-03)
-   - Python: [SES-04: No match is offered again: a source never changes, so a match a transform took is known by the history, its transform certificate's sub-certificate on that frame](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-04)
-   - Python: [SES-05: Copies are the session's: the sync a copy of the source it makes from a snapshot, the source never disturbed, the target the caller's; the sync's frame binds the match's objects as copied](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-05)
-   - Python: [SES-06: Policies rank: a clause weighs the candidates of the transforms it names by reference that agree with its arguments, an open parameter agreeing; a score is the sum of the weights, ties in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-06)
+   - Python: [SES-01: Candidates: by default, each frame of a transform's prototype mapped over the source, once per combination of its finite parameters' values (a bool's; a union of options' names), any other parameter left open; in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-01)
+   - Python: [SES-02: Open parameters are assigned; a candidate with an open parameter, or one not pending, is refused; a candidate skipped is no longer pending](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-02)
+   - Python: [SES-03: Taking a candidate: the session binds its arguments and applies its transform, by the caller's decision; the frame's other candidates for that transform leave, and nothing is queried again](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-03)
+   - Python: [SES-04: A session consumes its stream: a frame is offered once, and again only when fed again, unless the session excludes what its history took; it is done when the stream is drained and nothing is pending](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-04)
+   - Python: [SES-05: Copies are the session's: the sync a copy of the source it makes from a snapshot, the source never disturbed, the target the caller's; a frame is carried into the copy by its objects' paths](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-05)
+   - Python: [SES-06: Policies rank: a clause weighs the candidates of the transforms it names by reference that agree with its assignments, an open parameter agreeing; a score is the sum of the weights, ties in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-06)
    - Python: [SES-07: A policy decides where the caller lets it: `step_over` takes its first candidate, answering open parameters, and `run` steps until it cannot; the history records who decided each step](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-07)
-   - Python: [SES-08: What a session refuses: a history that holds steps, a transform it cannot match or whose target it is not given, and a frame it cannot bind to one](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-08)
+   - Python: [SES-08: What a session refuses: a history that holds steps, a transform with no prototype argument or whose target it is not given, and an argument it cannot bind to one frame](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-08)
+   - Python: [SES-09: The caller feeds the stream: a session offers exactly the frames fed, in the store they are in, that bind a transform's prototype's symbols, expanded; an iterable is pulled a frame at a time, and frames fed later extend the stream](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-09)
 
 ## Learn it by example
 <!-- no case: points to the tutorials and the test plan as a whole -->

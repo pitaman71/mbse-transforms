@@ -21,10 +21,11 @@ tutorials' frame), and the first release's second stage, `mbse.Transforms.Transf
 as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
 (`Transforms.Procedures`); the application of a transform to up to three frames already bound (`Transforms.apply`),
 verified by falsification or by a metric where asked; and the history, transform and frame certificates it writes and
-links, in a store of their own; and its third stage, the session (`Transforms.Session`), which offers each match of
-each transform's prototype as a candidate, binds the frames, makes the copy the transforms edit while the source stays
-undisturbed, and takes each step by the caller's decision or a policy's (`Transforms.Policy`, `Transforms.Clause`),
-the history certificate recording which. Reruns follow. Why it exists and what it
+links, in a store of their own; and its third stage, the session (`Transforms.Session`), whose candidates are a
+filter fed by a frame stream it consumes (by default, each transform's prototype mapped over the source), which binds
+each application's arguments, makes the copy the transforms edit while the source stays undisturbed, and takes each
+step by the caller's decision or a policy's (`Transforms.Policy`, `Transforms.Clause`), the history certificate
+recording which. Reruns follow. Why it exists and what it
 is to be are in [its charter](docs/proposals/charter/README.md), and its first release in
 [the first-release proposal](docs/proposals/first-release/README.md), with the gaps in mbse-schemas that building it
 found. The TypeScript package follows the Python one as a later stage.

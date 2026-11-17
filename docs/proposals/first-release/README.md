@@ -52,16 +52,20 @@ Each part is *(agent, for review)* where the decisions above leave it open.
    certificates; the history certificate a singleton's or an owner's, every certificate owned under it, so each has an
    object reference ([CAP-315](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-315.md)). A
    sub-certificate holds its frame as a `References.OfFrame`, a value.
-2. **Procedures**: native functions registered by name, `procedure(source, sync, target, arguments)`, each frame absent
+2. **Procedures**: native functions registered by name, `procedure(source, sync, target, assignments)`, each frame absent
    where the transform has none; an optional verification, the prototype falsified or a metric decreased.
 3. **The application**: given frames already bound, it runs the procedure, verifies where asked, and writes the transform
    certificate and its sub-certificates, linking the previous certificate on each frame's chain.
-4. **The session**, the caller of applications, which the procedure does not see: it finds the prototype's matches in
-   the source (candidates), binds the frames, makes or reuses the copies, applies one transform per step, and keeps the
-   history certificate. Policies rank candidates and answer parameters (the precursor's `Policy` and `Clause`), every
-   decision's provenance (caller, policy, reused) recorded by the history certificate (Decided, 2). How it makes copies is its own: a stacked store over the
-   source ([CAP-308](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-308)) keeps the
-   source undisturbed with the edits above it, or a snapshot.
+4. **The session**, the caller of applications, which the procedure does not see: its candidates are a filter fed by
+   a frame stream ("The transform candidates must come from a filter fed by a frame stream. That's how Store works,
+   no?"), which it consumes, termination being relative to it ("In a streaming system termination conditions are
+   relative"); by default only, the stream is the prototype's matches in the source. It binds each application's
+   arguments, makes the copies, applies one transform per step, and keeps the history certificate. Policies rank
+   candidates and answer parameters (the precursor's `Policy` and `Clause`), every decision's provenance (caller,
+   policy, reused) recorded by the history certificate (Decided, 2). How it makes copies is its own: a stacked store
+   over the source ([CAP-308](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-308))
+   was to keep the source undisturbed with the edits above it, but in mbse-schemas 0.28 it does not (Gaps found, 8),
+   so the session's copy is made from a snapshot.
 5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): an earlier
    history certificate given to a session reuses its transform certificates' parameters where the same transform
    applies to the same frame, reports the earlier ones that no longer apply (orphans), and two histories are compared
@@ -113,9 +117,9 @@ SES').
    no schema-aware code, but it repeats what the executor does, and it reaches only objects owned from a singleton.
    *Asked of mbse-schemas:* a public resolution within a transaction, such as `store.designated(reference)`.
 2. **No `Visitors.OfPattern` is made.** The protocol is defined, but the executor gives back `Transactions.Frame`s,
-   bindings and assignments, and nothing presents one as a `Visitors.OfPattern`. *Route:* the application presents
-   each frame itself, its pattern as the frame's store holds it by name, its symbols as members, refused once the
-   application ends (XF-03, XF-09).
+   symbol bindings and property assignments, and nothing presents one as a `Visitors.OfPattern`. *Route:* the
+   application presents each frame itself, its pattern as the frame's store holds it by name, its symbols as members,
+   refused once the application ends (XF-03, XF-09).
 3. **No pattern evaluated for a frame within an open transaction.** Whether a prototype still holds for a frame is
    asked of the executor, a map whose symbols are given the frame's references followed by a map of the pattern, which
    needs a transaction of its own on the frame's store. *Route:* falsification is verified after the frames commit;
