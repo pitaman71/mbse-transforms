@@ -99,7 +99,8 @@ As the user decided, on the questions as posed:
 
 What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
-public route stage 2 takes meanwhile (`python3/mbse/Transforms/Transforms.py`; the cases are suite XF's).
+public route stages 2 and 3 take meanwhile (`python3/mbse/Transforms/Transforms.py`; the cases are suites XF's and
+SES').
 
 1. **No reference resolved to a visitor within an open transaction.** A frame `store.transaction` gives back holds
    each symbol's object by its reference (CAP-315), and `Visitors.OfPattern` says a frame's members are the visitors of
@@ -134,6 +135,24 @@ public route stage 2 takes meanwhile (`python3/mbse/Transforms/Transforms.py`; t
    `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
    without parameters round-trips exactly. *Route:* XF-06 reads the certificates back from the snapshot and compares
    what they hold, not the snapshot's bytes.
+7. **A map gives a symbol no schema object.** Within a map, `p.symbols({"o": item_schema})` reads the schema object
+   given as the symbol's schema, not as the object it binds: in a store holding two items, it gives back two frames,
+   each binding an item, where a frame binding `shelf.Item` itself was meant. So a frame whose symbol binds a schema
+   object cannot be found by giving it. *Route:* a session binding the sync's frame of a match that binds a schema
+   object gives the map the references alone, and keeps the frames whose schema-object symbols are the copy's schema
+   object, by identity (SES-05). *Asked of mbse-schemas:* a way to give a symbol a schema object as the object it
+   binds.
+8. **No store over another keeps its writes above.** A store given a store below (`Builders.Store(below)`,
+   [CAP-283](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-283)) sends each
+   transaction it commits through to the store below
+   ([CAP-285](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-285)): a label written
+   to an item in a store over the source is in the source after the commit, so such a store does not keep the source
+   undisturbed, as What it builds, 4, supposed. And installing a pattern that declares parameters in a store over
+   another raises `AttributeError: '_ParameterData' object has no attribute '_schema'` (in `Changes._gather`), though
+   the same install runs in a store with none below. *Route:* the session's sync is a copy made from the source's
+   snapshot (`Plain.ToPlain(source).Snapshot()` read into a new store), every object at the same path, so that the
+   match's references designate the same objects in it (SES-05). *Asked of mbse-schemas:* a store over another that
+   keeps its writes above it (a copy on write), and the install fixed.
 
 ---
 

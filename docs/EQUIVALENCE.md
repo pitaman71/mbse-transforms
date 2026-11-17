@@ -29,7 +29,7 @@ language alone is listed here, in a table of its cases (each in backticks), its 
 
 | Cases | Language | Why |
 |---|---|---|
-| `XF-01`, `XF-02`, `XF-03`, `XF-04`, `XF-05`, `XF-06`, `XF-07`, `XF-08`, `XF-09`, `XF-10` | Python | Python first, as the user decided ([the first release](proposals/first-release/README.md#decided), Decided, 1): the TypeScript package gains the `Transforms` module, and these cases their twins, in a stage of its own, which removes this row |
+| `XF-01`, `XF-02`, `XF-03`, `XF-04`, `XF-05`, `XF-06`, `XF-07`, `XF-08`, `XF-09`, `XF-10`, `SES-01`, `SES-02`, `SES-03`, `SES-04`, `SES-05`, `SES-06`, `SES-07`, `SES-08` | Python | Python first, as the user decided ([the first release](proposals/first-release/README.md#decided), Decided, 1): the TypeScript package gains the `Transforms` module, its session included, and these cases their twins, in a stage of its own, which removes this row |
 
 ---
 
