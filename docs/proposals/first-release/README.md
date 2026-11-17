@@ -80,6 +80,28 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    frame, the earlier ones that no longer apply reported (orphans), and two histories compared (added, removed,
    changed).
 
+## Stage 4: reruns and diffs (a design, for review)
+
+[CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md):
+an earlier history's parameter assignments reused where the same transform applies to the same frame, and two histories
+compared. Two calls, and nothing else:
+
+1. **`reused(store, history, candidate)`**: the parameter assignments that the history named `history`, in the
+   certificates' store `store`, recorded for `candidate`'s transform on `candidate`'s frame, or none where it recorded
+   none. The caller then applies and certifies the candidate with them, `by` `"reused"`, as with any decision of its
+   own; nothing is taken for it.
+2. **`diff(store, earlier, later)`**: two histories compared, their transform certificates matched by transform and
+   pattern instance: **added**, in the later history only; **removed**, in the earlier history only, which are the
+   orphans, earlier decisions that no longer apply; **changed**, in both, with other parameter assignments.
+
+*(agent)* A transform is the same where its object reference is equal; a frame is the same where its pattern instance
+is equal as a value (its pattern and the object references its symbols bind, compared by mbse-schemas' `Comparison`),
+so that a rerun over a store made again with the same owners and keys matches the earlier frames.
+
+Not in it: no loop that reuses or takes candidates by itself; no filter that excludes frames ("In a streaming system
+termination conditions are relative"); no defaulted parameter; no certificate of a new kind, `"reused"` being a value
+of the history certificate's provenance, `by`.
+
 ## Not in it
 
 Composite transforms, undo ([CAP-079](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-079.md)),
@@ -126,7 +148,8 @@ route taken meanwhile (the cases are suites XF's and SES').
 2. **A keyed adjacency given a mapping inserts a second entry under a key held.** In an imperative update,
    `store.shelf.Shelf(shelf, lambda s: s.items({"nut": lambda e: e.item(lambda i: i.name("nut"))}))` run twice leaves
    two entries keyed `"nut"` in a relation whose `unique` clause is `["shelf", "key"]`, and the commit does not refuse
-   them. *Route:* none needed here; the cases' procedures write each key once.
+   them. *Route:* none needed here; the cases' procedures write each key once. A fix is proposed in mbse-schemas
+   ([PR #53](https://github.com/pitaman71/mbse-schemas/pull/53)).
 3. **A snapshot of a schema that declares parameters is not read back the same.** In a store with `Parametrics`
    installed, a pattern declaring a parameter (`.parameters([txn.Parametrics.OfParameters(...)])`), written by
    `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
