@@ -1,120 +1,131 @@
-"""Transforms: a transform's model, its procedure, its application to up to three frames, and the certificates that
-record each application ([CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md);
+"""Transforms: a transform's model, its procedure, its application to the caller's visitors, the certificates that
+record each application, and the candidates a frame stream gives
+([CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md);
 [CAP-075: steps linked to what they matched and wrote](mbse:mbse-basis/docs/capabilities/CAP-075.md)).
 
-The models are mbse-schemas data, installed by `install(txn)`, read and written through mbse-schemas' generic API
-alone, and written, read and compared as any data is, with no code of their own (CAP-282):
+As the user decided: "A transform has a prototype, a procedure, and a cerificate. The prototype comprises what you
+called `before`. The procedure is native code for the time being." Application "takes up to three arguments as
+visitors": `source`, "a read-only `Visitors.OfPattern` bearing a pattern frame bound to a source copy that is not to be
+disturbed (nondestructive)"; `sync`, "a writeable `Visitors.OfPattern` bearing a pattern frame bound to a copy that is
+to be edited in place (destructive)"; and `target`, "a writeable `Visitors.OfPattern` bearing a pattern frame bound to
+a (usually empty) copy that is to be replaced (constructive)". "The transforms application procedure does not need to
+know how copies are made since it takes Visitors.OfPattern as an argument": the caller makes each visitor, and each
+bears its own pattern frame. "A pattern instance is a frame."
+
+The models are mbse-schemas data, installed by `install(txn)`, and written, read and compared as any data is, with no
+code of their own ("No model should need bespoke schema-aware code to read or write. Use mbse-schemas built-in
+serialization support."):
 
 - `Transforms.Transform`, owned by the singleton `Transforms.TheCatalog` (`Transforms.Catalog`) under its name
-  (`Transforms.Defines`): its `procedure`, the name its procedure is registered under; its `prototype`, a
-  `Schemas.OfPattern` (`Transforms.HasPrototype`); its `frames`, keyed by role (`source`, `sync`, `target`), each
-  the pattern the frame of that role is a frame of (`Transforms.TakesFrame`); and its `verify`, `"falsified"`,
-  `"metric"` or absent. Its parameters are those its prototype declares through mbse-schemas' `Parametrics`.
-  `define(txn, ...)` gives the upsert that defines one.
-- The **history certificate**, `Transforms.HistoryCertificate`, owned by the singleton `Transforms.TheHistories`
-  (`Transforms.Histories`) under its name (`Transforms.HoldsHistory`): the sequence of its transform certificates
-  (`steps`, `Transforms.InHistory`, keyed by `index`, from 0), and its provenance, who decided each step's parameters
-  (`decisions`, `Transforms.Decided`, an entry per step holding `by`: `caller`, `policy` or `reused`).
-- The **transform certificate**, `Transforms.TransformCertificate`, owned by its history under its index: the
-  transform applied (`transform`, `Transforms.Applies`), its prototype (`prototype`, `Transforms.Prototyped`), the
-  parameters' values (`arguments`, a container of values by name), the previous and next certificates in the history
-  (`prev` and `next`, `Transforms.Precedes`), and its sub-certificates (`frames`, `Transforms.HasFrame`, keyed by
-  role).
-- A **sub-certificate**, `Transforms.FrameCertificate`, owned by its transform certificate under its role, one per
-  frame present: the pattern instance, the frame, as a `References.OfFrame` value (`frame`), the pattern it is a frame
-  of (`pattern`, `Transforms.FrameOf`), and the preceding transform certificate for that pattern instance on the same
-  history (`preceding`, `Transforms.Preceded`), where there is one.
+  (`Transforms.Defines`): its `prototype`, an `OfPattern` (`Transforms.HasPrototype`), and its `procedure`, the name its
+  procedure is registered under. Its parameters are those its prototype declares through mbse-schemas' `Parametrics`
+  *(agent)*. `define(txn, name, procedure, prototype)` gives the upsert that defines one.
+- "There's actually 3 levels of certificates that form a complete audit history for transforms":
+  - the **history certificate**, `Transforms.HistoryCertificate`, "which records a sequence of transforms", owned by the
+    singleton `Transforms.TheHistories` (`Transforms.Histories`) under its name (`Transforms.HoldsHistory`): its
+    transform certificates (`steps`, `Transforms.InHistory`, keyed by `index`, from 0), and its provenance ("the
+    history certificate can capture provenance"), who decided each step's parameters (`decisions`,
+    `Transforms.Decided`, holding `by`, as the caller gives it);
+  - the **transform certificate**, `Transforms.TransformCertificate`, "which records the application, linked to the
+    transform's prototype, the history certificate, and prev/next transforms in the history", owned by its history
+    under its index: the transform (`transform`) and its prototype (`prototype`), each a `References.OfObject` value
+    *(agent: the transforms may be in another store than the certificates)*; the parameter assignments
+    (`assignments`, a container of values by parameter name: "ofc those parameters must be recorded in the transform
+    certificate"); `prev` and `next` (`Transforms.Precedes`); and its sub-certificates (`frames`, `Transforms.HasFrame`,
+    keyed by argument);
+  - a **sub-certificate**, `Transforms.FrameCertificate`, one "for the source, sync, and target (whichever are
+    present)", owned by its transform certificate under its argument, linking "to the corresponding pattern instance and
+    to the preceding transform for that pattern on the same history": the frame its argument's visitor bore
+    (`frame`, a `References.OfFrame` value), the pattern it is a frame of, read from the visitor by `as_schema()`
+    (`pattern`, a `References.OfObject` value *(agent)*), and the preceding transform certificate for that pattern
+    instance on the same history (`preceding`, `Transforms.Preceded`), where there is one.
 
-A **procedure** is a native function registered by name in a `Procedures` registry,
-`procedure(source, sync, target, arguments)`: each frame a `Visitors.OfPattern` whose symbols are members, each the
-visitor of the object it binds, or None where the transform takes none; `arguments`, the parameters' values, read-only.
-It reads its frames, and writes the sync and the target through the stores' builders
-(`Proxies.store_of(member).<schema>(member, ...)`). Its contract:
+A **procedure** is a native function registered by name in a `Procedures` registry, called with the caller's visitors
+and the parameter assignments, and that's that: `procedure(source, sync, target, assignments)`, each visitor or None.
+"Transforms may not make decisions below the parameter level. Discrete decisions in a transformation procedure must
+themselves be modeled as discrete transforms with non-overlapping patterns."
 
-- **No decisions below the parameter level**: "Discrete decisions in a transformation procedure must themselves be
-  modeled as discrete transforms with non-overlapping patterns." Every choice a procedure makes is a parameter's value,
-  given in `arguments`; its deterministic branches on data, which choose nothing, are computation, not decisions
-  (PRI-014).
-- It reads and writes only through mbse-schemas' visitors and builders, and keeps nothing it was given: every visitor,
-  the frames included, lives only within the application (CAP-315), and is refused after it.
-- It writes no source: the source is "not to be disturbed".
-- It does not know how the copies behind its frames are made, nor which stores hold them.
-
-`apply(store, transform, arguments, history, procedures, source=..., sync=..., target=...)` applies a transform defined
-in `store`, the certificates' store, to frames already bound, each a `Bound(store, frame)`: a frame
-`store.transaction` gave back, or any mapping of its symbols to their objects' references, in its store. It checks
-what it is given, opens a transaction on each store, presents each frame as a `Visitors.OfPattern`, runs the procedure,
-verifies where the transform asks it to, commits, and writes the certificates. It gives back the transform
-certificate's reference.
+`apply(transform, assignments, procedures, source=..., sync=..., target=...)` receives the caller's visitors, the
+transform (a visitor of a `Transforms.Transform`) and the parameter assignments. It calls the transform's procedure with
+the visitors and the assignments, and that's that: it writes nothing and opens no transaction. A follow-up call,
+`certify(store, transform, assignments, history, by, source=..., sync=..., target=...)`, writes the certificates, in
+`store`, the certificates' store, as the caller gives it: appended to the history named `history`, recording that `by`
+decided the parameters. The caller verifies, if at all, with its own call between the two ("the pattern constraint -
+application may optionally verify that the pattern is falsified by the application or more generally an additional
+metric that computes recursion progress toward termination"): a failed verification is simply not certifying.
+**The only transaction mbse-transforms opens is the one `certify` writes the certificates in, in `store`.** It opens
+none on the visitors' stores: the visitors are the caller's, within the caller's transactions, which commit or roll
+back what the procedure wrote. Since mbse-schemas' transactions do not nest, `store` is one in which the caller holds
+no transaction open while it certifies: neither a visitor's store nor the transform's. `store` holds
+`Transforms.install`.
 
 Decided here *(agent)*, each for review:
 
-- **The certificates live in a store of their own**, the store the transforms are defined in, which holds no frame:
-  "the certificates' store". A history spans applications whose frames are in many stores, and a target "is to be
-  replaced", which would take certificates written into it along with it. The store holds the transforms, their
-  patterns (so the app installs its model's schemas there too, but no data), and the certificates, so that they are
-  queried in one store and no store reaches another's objects (CAP-075).
-- **One transaction per store, the certificates' outermost.** The source's transaction is rolled back whatever the
-  procedure did, so the source is never disturbed; its store holds no other frame. The sync and the target may share
-  a store, then one transaction. The frames' transactions end first: where the procedure, a metric's verification or a
-  commit raises, nothing is written anywhere. The certificates are written once the frames have committed and the
-  falsification, where asked, verified, so nothing that did not happen is certified.
-- **Falsification is verified after the frames commit**: the prototype, as the sync's store holds it by name, must
-  hold for the sync frame before the procedure runs and no longer hold after it. mbse-schemas evaluates a pattern only
-  in a transaction of its own, which cannot be opened within the one the procedure writes in (Gaps found, 3). Where it
-  fails, `VerificationError` is raised and no certificate written, the sync keeping what the procedure wrote: the
-  sync is a copy, the caller's (the session's) to discard. A transform that asks for it takes a sync whose pattern is
-  its prototype.
-- **A metric** is native, registered with the procedure, `metric(source, sync, target, arguments)`, a number computed
-  before and after the procedure within its transactions; it must decrease, or everything is rolled back.
-- **Each role's pattern is the transform's**: `frames`, keyed by role. The prototype is the pattern of the frame it is
-  matched in, the source's, else the sync's. Each frame's store holds that pattern by its name (an app installs its
-  patterns wherever they are matched), and the frame binds exactly its symbols.
-- **Parameters** are those the prototype declares (`Parametrics`); an application gives every one a value and no
-  other ("no defaults"). Whether a value is of its parameter's schema is not checked, as mbse-schemas checks no
-  assignment's (CAP-313). The values are recorded in the transform certificate as a container of values by name.
-- **A pattern instance's chain**: the preceding transform for a sub-certificate's pattern instance is the latest
-  earlier transform certificate on the same history with a sub-certificate of the same pattern binding the same
-  objects (`binds` equal), whatever its role.
-- **A frame's objects are found by navigation**: within its store's transaction, from the singleton its reference's
-  path starts at, through each ownership entry by its keys. mbse-schemas has no public function giving a visitor of
-  what a reference designates within an open transaction (Gaps found, 1). A schema object, which a frame holds as
-  itself, is presented as itself.
+- **The transform is given as a visitor** of its `Transforms.Transform`, within the caller's transaction on the
+  transforms' store, as the arguments are.
+- **A sub-certificate's pattern instance is read from its visitor when `certify` is called**: each symbol of the
+  visitor's pattern (`as_schema()`), its member's reference (`References.of`), in the store the first member is in;
+  the frame's bindings only, as `References.of` gives them for a mapping.
+- **The assignments are given to the procedure read-only**, so that the certificate records what it was given.
+- **The preceding transform for a pattern instance** is the latest earlier transform certificate on the same history
+  with a sub-certificate whose `pattern` and `frame` are equal as values (mbse-schemas' `Comparison`), whatever its
+  argument.
+- **The verification** is the caller's own call, after `apply` and before `certify`; where it fails, the caller does
+  not certify, and no certificate is written. A falsification is the caller's evaluation of the prototype; a metric,
+  the caller's comparison of a value it computed before applying.
+- **The history is created by its first certification**, under its name; a procedure's return value is ignored.
 - **A registry is a value** the caller makes and gives each application; none is global, as no store is (CAP-161).
-- **The history is created by its first application**, under its name; a procedure's return value is ignored.
+
+**Candidates**: "The transform candidates must come from a filter fed by a frame stream. That's how Store works, no?"
+A `Session(transforms, frames)` is that filter: `transforms`, visitors of `Transforms.Transform`s, read once,
+when it is made; `frames`, the frame stream the caller supplies, each frame a `Visitors.OfPattern`. Iterating it pulls
+each frame once and gives its candidates: for each transform whose prototype the frame is a frame of, one candidate per
+combination of the values of the parameters whose domains are finite, any other parameter left open
+(`Candidate.answer(**values)`), in a canonical order. A follow-up call, `session.ranked(policy)`, gives the same
+candidates ranked by the policy. "In a streaming system termination conditions are relative": it ends when the stream
+does, and queries nothing again. The caller takes a candidate by applying it with its own visitors.
+
+Decided here for the candidates *(agent)*, each for review:
+
+- **A frame is a frame of a prototype** where its pattern (`as_schema()`) has the prototype's name: the name a store
+  registers a pattern under, which is the same in every store that holds it.
+- **Finite domains**: a `bool`'s, `(False, True)`; a union's whose branches are each a value object with no properties,
+  the branches' names.
+- **The canonical order**: the transforms' order as given, then each parameter's values in their domain's order, the
+  parameters in the order the prototype declares them. A policy ranks one frame's candidates: by score, highest first,
+  ties in the canonical order.
+- **Iterating a session gives each frame's candidates as a list**, one frame at a time, as it is pulled; a frame that
+  passes no transform's filter gives none. Its frames are pulled once, so a session is iterated once, directly or
+  through `ranked`: iterated again, it goes on from the frames not yet pulled, none once the stream is drained.
+- **A clause names transforms by object reference** (`References.OfObject`, PRI-015), one or a sequence of them,
+  compared as values (mbse-schemas' `Comparison`); it applies to a candidate of a transform it names whose assignments
+  hold each of the clause's assignments. A candidate's score is the sum of the weights of the clauses that apply.
 """
 
 from __future__ import annotations
 
-import contextlib
-import json
-from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass
+import itertools
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any
 
-from mbse.Schemas.Framework import Builders, Plain, Proxies, References
+from mbse.Schemas.Framework import Builders, Comparison, Plain, Proxies, References
 
 __all__ = [
-    "BY",
-    "ROLES",
-    "VERIFY",
-    "Bound",
+    "Candidate",
+    "Clause",
+    "Policy",
     "Procedures",
-    "VerificationError",
+    "Session",
     "apply",
+    "certify",
     "define",
     "install",
 ]
 
-ROLES = ("source", "sync", "target")
-"""The roles of an application's frames, in the order a procedure takes them."""
-
-BY = ("caller", "policy", "reused")
-"""Who decides a step's parameters, as its history certificate records it."""
-
-VERIFY = ("falsified", "metric")
-"""What an application verifies, where a transform asks it to."""
+ARGUMENTS = ("source", "sync", "target")
+"""The application's arguments, in the order a procedure takes them."""
 
 Procedure = Callable[[Any, Any, Any, Mapping[str, Any]], Any]
 
@@ -126,11 +137,10 @@ def install(txn: Any) -> Any:
     return txn.uid("mbse.Transforms/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({
             "Catalog": S.OfObject, "Defines": S.OfRelation, "Transform": S.OfObject, "HasPrototype": S.OfRelation,
-            "TakesFrame": S.OfRelation, "Histories": S.OfObject, "HoldsHistory": S.OfRelation,
-            "HistoryCertificate": S.OfObject, "InHistory": S.OfRelation, "Decided": S.OfRelation,
-            "TransformCertificate": S.OfObject, "Applies": S.OfRelation, "Prototyped": S.OfRelation,
+            "Histories": S.OfObject, "HoldsHistory": S.OfRelation, "HistoryCertificate": S.OfObject,
+            "InHistory": S.OfRelation, "Decided": S.OfRelation, "TransformCertificate": S.OfObject,
             "Precedes": S.OfRelation, "HasFrame": S.OfRelation, "FrameCertificate": S.OfObject,
-            "FrameOf": S.OfRelation, "Preceded": S.OfRelation,
+            "Preceded": S.OfRelation,
         })
         .spec([
             # --- Transforms, in a catalog, by name ---
@@ -141,18 +151,12 @@ def install(txn: Any) -> Any:
                 ["catalog", "name"], ["transform"]]),
             lambda _: _.Transform.name("Transforms.Transform").ref(True).properties({
                 "procedure": S.OfStr,  # the name its procedure is registered under
-                "verify": S.OfStr,  # "falsified", "metric", or absent
             }).adjacencies([
                 lambda t: t.name("catalog").relation([_.Defines]).me("transform").owner(True),
                 lambda t: t.name("prototype").relation([_.HasPrototype]).me("transform"),
-                lambda t: t.name("frames").relation([_.TakesFrame]).me("transform"),
-                lambda t: t.relation([_.Applies]).me("transform"),
             ]),
             lambda _: _.HasPrototype.name("Transforms.HasPrototype").links([
                 lambda t: t.name("transform"), lambda t: t.name("pattern")]).uniques([["transform"]]),
-            lambda _: _.TakesFrame.name("Transforms.TakesFrame").links([
-                lambda t: t.name("transform"), lambda t: t.name("pattern")]).properties({"role": S.OfStr}).uniques([
-                ["transform", "role"]]),
             # --- The history certificate: a sequence of transform certificates, and who decided each ---
             lambda _: _.Histories.name("Transforms.Histories").ref(True).singleton("Transforms.TheHistories")
             .adjacencies({"histories": lambda t: t.relation([_.HoldsHistory]).me("directory")}),
@@ -169,328 +173,123 @@ def install(txn: Any) -> Any:
                 ["history", "index"], ["step"]]),
             lambda _: _.Decided.name("Transforms.Decided").links([
                 lambda t: t.name("history"), lambda t: t.name("step")]).properties({
-                "by": S.OfStr}).uniques([["step"]]),  # "caller", "policy" or "reused"
+                "by": S.OfStr}).uniques([["step"]]),  # who decided the step's parameters: the caller's word
             # --- The transform certificate: one application ---
             lambda _: _.TransformCertificate.name("Transforms.TransformCertificate").ref(True).properties({
-                "arguments": S.OfContainer(lambda c: c.index([S.OfStr]).element([S.OfAny(lambda a: a)])),
+                "transform": txn.References.OfObject,  # the transform applied
+                "prototype": txn.References.OfObject,  # its prototype
+                "assignments": S.OfContainer(lambda c: c.index([S.OfStr]).element([S.OfAny(lambda a: a)])),
             }).adjacencies([
                 lambda t: t.name("history").relation([_.InHistory]).me("step").owner(True),
-                lambda t: t.name("transform").relation([_.Applies]).me("certificate"),
-                lambda t: t.name("prototype").relation([_.Prototyped]).me("certificate"),
                 lambda t: t.name("prev").relation([_.Precedes]).me("after"),
                 lambda t: t.name("next").relation([_.Precedes]).me("before"),
                 lambda t: t.name("frames").relation([_.HasFrame]).me("step"),
                 lambda t: t.relation([_.Decided]).me("step"),
                 lambda t: t.relation([_.Preceded]).me("step"),
             ]),
-            lambda _: _.Applies.name("Transforms.Applies").links([
-                lambda t: t.name("certificate"), lambda t: t.name("transform")]).uniques([["certificate"]]),
-            lambda _: _.Prototyped.name("Transforms.Prototyped").links([
-                lambda t: t.name("certificate"), lambda t: t.name("pattern")]).uniques([["certificate"]]),
             lambda _: _.Precedes.name("Transforms.Precedes").links([
                 lambda t: t.name("before"), lambda t: t.name("after")]).uniques([["before"], ["after"]]),
             lambda _: _.HasFrame.name("Transforms.HasFrame").links([
-                lambda t: t.name("step"), lambda t: t.name("frame")]).properties({"role": S.OfStr}).uniques([
-                ["step", "role"], ["frame"]]),
-            # --- A sub-certificate: one frame of an application ---
+                lambda t: t.name("step"), lambda t: t.name("frame")]).properties({"argument": S.OfStr}).uniques([
+                ["step", "argument"], ["frame"]]),
+            # --- A sub-certificate: one argument of an application ---
             lambda _: _.FrameCertificate.name("Transforms.FrameCertificate").ref(True).properties({
                 "frame": txn.References.OfFrame,  # the pattern instance
+                "pattern": txn.References.OfObject,  # the pattern it is a frame of
             }).adjacencies([
                 lambda t: t.name("step").relation([_.HasFrame]).me("frame").owner(True),
-                lambda t: t.name("pattern").relation([_.FrameOf]).me("frame"),
                 lambda t: t.name("preceding").relation([_.Preceded]).me("frame"),
             ]),
-            lambda _: _.FrameOf.name("Transforms.FrameOf").links([
-                lambda t: t.name("frame"), lambda t: t.name("pattern")]).uniques([["frame"]]),
             lambda _: _.Preceded.name("Transforms.Preceded").links([
                 lambda t: t.name("frame"), lambda t: t.name("step")]).uniques([["frame"]]),
         ])]))])
 
 
-def define(txn: Any, name: str, procedure: str, prototype: Any, frames: Mapping[str, Any],
-           verify: str | None = None) -> Any:
+def define(txn: Any, name: str, procedure: str, prototype: Any) -> Any:
     """The upsert that defines the transform `name` in the catalog of the store a transaction writes:
-    `store.transaction(lambda t: Transforms.define(t, "Label", "label", t.shelf.Named, {"sync": t.shelf.Named}))`.
-    `prototype` and each of `frames`' patterns are pattern schema objects, or their paths; `frames` maps each role it
-    takes to its pattern. Run again, it finds the transform and writes nothing."""
-    unknown = [role for role in frames if role not in ROLES]
-    if unknown or not frames:
-        raise ValueError(f"a transform takes one to three frames, each a role of {list(ROLES)}: got {list(frames)}")
-    if verify is not None and verify not in VERIFY:
-        raise ValueError(f"a transform verifies one of {list(VERIFY)}, or nothing: got {verify!r}")
+    `store.transaction(lambda t: Transforms.define(t, "Label", "label", t.shelf.Unlabelled))`. `prototype` is a pattern
+    schema object, or its path. Run again, it finds the transform and writes nothing."""
     T = txn.Transforms
-    taken = {role: (lambda e, pattern=pattern: e.pattern(pattern)) for role, pattern in frames.items()}
     return txn.mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"catalog": T.Catalog, "transform": T.Transform})
         .spec([
             lambda _: _.catalog.transforms({name: lambda e: e.transform(_.transform)}),
-            lambda _: _.transform.procedure(procedure).verify(verify).prototype([lambda e: e.pattern(prototype)])
-            .frames(taken),
+            lambda _: _.transform.procedure(procedure).prototype([lambda e: e.pattern(prototype)]),
         ])]))])
 
 
-class VerificationError(ValueError):
-    """An application whose verification failed: its prototype not falsified, or its metric not decreased."""
-
-
-@dataclass(frozen=True)
-class _Registered:
-    procedure: Procedure
-    metric: Procedure | None
-
-
 class Procedures:
-    """A registry of procedures, each a native function `procedure(source, sync, target, arguments)` registered by
-    name, with its metric where it has one. A registry is a value the caller makes and gives each application."""
+    """A registry of procedures, each a native function `procedure(source, sync, target, assignments)` registered by
+    name. A registry is a value the caller makes and gives each application."""
 
     def __init__(self) -> None:
-        self._registered: dict[str, _Registered] = {}
+        self._registered: dict[str, Procedure] = {}
 
-    def register(self, name: str, procedure: Procedure | None = None, *, metric: Procedure | None = None) -> Any:
-        """Registers `procedure` under `name`, with its `metric`; without a procedure, a decorator that does. A name
-        is registered once."""
-        if procedure is None:
-            return lambda given: self.register(name, given, metric=metric)
+    def register(self, name: str, procedure: Procedure) -> Procedure:
+        """Registers `procedure` under `name`. A name is registered once."""
         if name in self._registered:
             raise ValueError(f"a procedure is registered as {name!r} already")
-        self._registered[name] = _Registered(procedure, metric)
+        self._registered[name] = procedure
         return procedure
 
     def __contains__(self, name: object) -> bool:
         return name in self._registered
 
-    def _get(self, name: str) -> _Registered:
+    def __getitem__(self, name: str) -> Procedure:
         registered = self._registered.get(name)
         if registered is None:
             raise LookupError(f"no procedure is registered as {name!r}")
         return registered
 
 
-@dataclass(frozen=True)
-class Bound:
-    """A frame already bound, in its store: `frame`, a frame `store.transaction` gave back, or any mapping of its
-    symbols to their objects' references (a schema object as itself)."""
-
-    store: Any
-    frame: Mapping[str, Any]
+def _plain(own: Any, x: Any) -> Any:
+    """The reference of an object, a schema object or a frame, made in the store `own`, as plain data: what another
+    store reads (mbse-schemas' serialization)."""
+    reference = References.of(own, x)
+    return Plain.ToPlain(own)(reference.as_schema(), reference)
 
 
-class _Presented:
-    """A frame presented to a procedure, a `Visitors.OfPattern`: its pattern, and its symbols as members, each the
-    visitor of the object it binds. It lives only within the application, as the visitors it holds do."""
-
-    def __init__(self, pattern: Any, members: Mapping[str, Any]):
-        object.__setattr__(self, "_pattern", pattern)
-        object.__setattr__(self, "_members", dict(members))
-        object.__setattr__(self, "_alive", True)
-
-    def _check(self) -> None:
-        if not self._alive:
-            raise ValueError("a visitor lives only within the transaction that made it: a frame presented to a "
-                             "procedure lives only within its application")
-
-    def as_schema(self) -> Any:
-        self._check()
-        return self._pattern
-
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith("_"):
-            raise AttributeError(name)
-        self._check()
-        if name not in self._members:
-            raise AttributeError(f"{name!r} is not a symbol of the pattern {self._pattern.name!r}")
-        return self._members[name]
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        raise AttributeError("a frame's members are read, and written through the store's builders, never assigned")
-
-    def __repr__(self) -> str:
-        return f"<frame of {self._pattern.name}>"
+def _value(store: Any, schema: str, plain: Any) -> Any:
+    """A reference given as plain data, as a value of the store's."""
+    return Plain.FromPlain(store)(store.registered(schema), plain)
 
 
-@dataclass
-class _Transform:
-    """What an application reads of a transform, within the certificates' store's transaction."""
-
-    name: str
-    visitor: Any
-    procedure: str
-    verify: str | None
-    prototype: Any
-    patterns: dict[str, Any]
-    parameters: list[str]
-
-
-def _transform(store: Any, name: str) -> _Transform:
-    try:
-        catalog = store.singleton("Transforms.TheCatalog")
-    except LookupError:
-        raise LookupError("the store has no Transforms installed: store.transaction(Transforms.install)") from None
-    try:
-        visitor = catalog.transforms.at(name).transform
-    except KeyError:
-        raise LookupError(f"no transform named {name!r} is defined in the store") from None
-    prototypes = [entry.pattern for entry in visitor.prototype]
+def _prototype(transform: Any) -> Any:
+    """A transform's prototype, the pattern it holds."""
+    prototypes = [entry.pattern for entry in transform.prototype]
     if len(prototypes) != 1:
-        raise ValueError(f"transform {name!r} has no prototype")
-    patterns = {str(entry.role): entry.pattern for entry in visitor.frames}
-    parameters = [str(entry.name) for held in Builders.OfPattern.Builder(prototypes[0], False, store).parameters
-                  for entry in held.params.parameters]
-    return _Transform(name, visitor, str(visitor.procedure), visitor.verify.get(), prototypes[0], patterns, parameters)
+        raise ValueError(f"transform {_name(transform)!r} has no prototype")
+    return prototypes[0]
 
 
-def _plain_path(store: Any, reference: Any) -> Any:
-    """A reference's path, as plain data; None for a schema object, which a frame holds as itself."""
-    if not hasattr(reference, "as_schema"):
-        return None
-    return Plain.ToPlain(store)(reference.as_schema(), reference)["path"]
+def _name(transform: Any) -> str:
+    """The name a transform is defined under in its catalog."""
+    return next(str(entry.name) for entry in transform.catalog)
 
 
-def _resolve(store: Any, symbol: str, reference: Any) -> Any:
-    """The visitor of the object a reference designates, within the store's transaction open: from the singleton its
-    path starts at, through each ownership entry by its keys (Gaps found, 1). A schema object, as itself."""
-    path = _plain_path(store, reference)
-    if path is None:
-        return reference
-    if path["singleton"] == ".":
-        raise ValueError(f"symbol {symbol!r} is given a schema object's reference: a frame holds a schema object as "
-                         "itself")
-    nothing = LookupError(f"symbol {symbol!r}: the store holds nothing at its reference")
-    try:
-        current = store.singleton(path["singleton"])
-    except LookupError:
-        raise nothing from None
-    step = path["next"]
-    while "entry" in step:
-        at = step["entry"]
-        adjacency = getattr(current, at["i"])
-        keys = at.get("properties", {})
-        found = [entry for entry in adjacency if all(
-            type(getattr(entry, key).get()) is type(value) and getattr(entry, key).get() == value
-            for key, value in keys.items())]
-        if len(found) != 1:
-            raise nothing
-        (entry,) = found
-        me = adjacency.as_schema().me
-        current = getattr(entry, next(link for link in entry.as_schema().links if link != me))
-        step = at["next"]
-    return current
+def _instance(visitor: Any) -> tuple[Any, Any]:
+    """The pattern instance a visitor bears: its pattern (`as_schema()`) and its frame, a `References.OfFrame` read in
+    the store its first member is in, each as plain data."""
+    pattern = visitor.as_schema()
+    members = {symbol: getattr(visitor, symbol) for symbol in pattern.symbols}
+    own = Proxies.store_of(next(iter(members.values())))
+    return _plain(own, pattern), _plain(own, members)
 
 
-def _pattern_in(store: Any, role: str, pattern: Any) -> Any:
-    """The pattern a frame's store holds by the name of the transform's pattern for that role."""
-    try:
-        return store.registered(pattern.name)
-    except LookupError:
-        raise LookupError(f"the {role}'s store holds no pattern {pattern.name!r}: install it where its frames are "
-                          "bound") from None
+def _same(a: Any, b: Any) -> bool:
+    """Whether two values are equal as values of their schema (mbse-schemas' `Comparison`)."""
+    return Comparison.OfObject(a.as_schema(), a).compare(Comparison.OfObject(b.as_schema(), b)) == 0
 
 
-def _holds(bound: Bound, pattern: Any) -> bool:
-    """Whether a pattern holds for a frame's objects, in the frame's store: a map whose symbols are given the frame's
-    references, then a map of the pattern, whose symbols they bind already."""
-    store = bound.store
-    held = _pattern_in(store, "sync", pattern)
-    given = {symbol: bound.frame[symbol] for symbol in held.symbols}
-    frames = store.transaction(lambda t: t.mutations([lambda mu: mu.map(lambda m: m.symbols([lambda p: p
-        .symbols(given)]).then([lambda w: w.map(lambda n: n.symbols([held]))]))]))
-    return bool(frames)
-
-
-@contextlib.contextmanager
-def _rolled_back(store: Any) -> Iterator[None]:
-    """A transaction on the source's store, rolled back whatever was done within it: the source is not disturbed."""
-
-    class Discarded(Exception):
-        pass
-
-    try:
-        with store.transaction():
-            yield
-            raise Discarded
-    except Discarded:
-        pass
-
-
-def _check(given: dict[str, Bound], store: Any, t: _Transform, arguments: Mapping[str, Any],
-           procedures: Procedures) -> _Registered:
-    """What an application refuses before it opens a frame's transaction."""
-    registered = procedures._get(t.procedure)
-    if set(given) != set(t.patterns):
-        raise ValueError(f"transform {t.name!r} takes {[r for r in ROLES if r in t.patterns]}: given "
-                         f"{[r for r in ROLES if r in given]}")
-    matched = "source" if "source" in t.patterns else "sync"
-    if t.patterns.get(matched) is not t.prototype:
-        raise ValueError(f"transform {t.name!r}: its prototype is the pattern of its {matched} frame")
-    missing = [name for name in t.parameters if name not in arguments]
-    extra = [name for name in arguments if name not in t.parameters]
-    if missing or extra:
-        raise ValueError(f"transform {t.name!r} has parameters {t.parameters}: every one is given a value and no other "
-                         f"is (missing {missing}, unknown {extra})")
-    if t.verify is not None and t.verify not in VERIFY:
-        raise ValueError(f"transform {t.name!r} verifies {t.verify!r}: one of {list(VERIFY)}, or nothing")
-    if t.verify == "falsified" and t.patterns.get("sync") is not t.prototype:
-        raise ValueError(f"transform {t.name!r} verifies falsification: it takes a sync whose pattern is its prototype")
-    if t.verify == "metric" and registered.metric is None:
-        raise ValueError(f"transform {t.name!r} verifies a metric: procedure {t.procedure!r} is registered with none")
-    for role, bound in given.items():
-        if bound.store is store:
-            raise ValueError(f"the {role}'s store is the certificates' store: the certificates live in a store of "
-                             "their own")
-        if role != "source" and "source" in given and bound.store is given["source"].store:
-            raise ValueError(f"the {role}'s store is the source's: the source's store holds no other frame")
-        if getattr(bound.frame, "errors", None):
-            raise ValueError(f"the {role} frame is annotated with errors")
-        symbols = list(_pattern_in(bound.store, role, t.patterns[role]).symbols)
-        if sorted(bound.frame) != sorted(symbols):
-            raise ValueError(f"the {role} frame binds {sorted(bound.frame)}: a frame of "
-                             f"{t.patterns[role].name!r} binds {sorted(symbols)}")
-    return registered
-
-
-def _run(given: dict[str, Bound], t: _Transform, registered: _Registered, arguments: Mapping[str, Any]) -> None:
-    """Opens a transaction on each frame's store, presents the frames, runs the procedure and verifies its metric:
-    the source's transaction rolled back, the others committed."""
-    presented: dict[str, _Presented] = {}
-    with contextlib.ExitStack() as transactions:
-        opened: list[Any] = []
-        for role in ("sync", "target", "source"):  # the source's innermost: rolled back first
-            bound = given.get(role)
-            if bound is None or any(bound.store is store for store in opened):
-                continue
-            opened.append(bound.store)
-            transactions.enter_context(_rolled_back(bound.store) if role == "source" else bound.store.transaction())
-        try:
-            for role, bound in given.items():
-                members = {symbol: _resolve(bound.store, symbol, bound.frame[symbol]) for symbol in bound.frame}
-                presented[role] = _Presented(_pattern_in(bound.store, role, t.patterns[role]), members)
-            frames = [presented.get(role) for role in ROLES]
-            before = registered.metric(*frames, arguments) if t.verify == "metric" else None  # type: ignore[misc]
-            registered.procedure(*frames, arguments)
-            if t.verify == "metric":
-                after = registered.metric(*frames, arguments)  # type: ignore[misc]
-                if not after < before:
-                    raise VerificationError(f"transform {t.name!r}: its metric did not decrease ({before} to {after})")
-        finally:
-            for frame in presented.values():
-                object.__setattr__(frame, "_alive", False)
-
-
-def _frame_plain(bound: Bound) -> Any:
-    """A frame's reference, as plain data, written by its own store."""
-    reference = References.of(bound.store, bound.frame)
-    return Plain.ToPlain(bound.store)(reference.as_schema(), reference)
-
-
-def _binds(store: Any, certificate: Any) -> str:
-    """A sub-certificate's pattern instance, its frame's bindings, as canonical text."""
+def _held(member: Any) -> Any:
+    """The value object a property holds, as its visitor."""
     held: list[Any] = []
-    certificate.frame.as_object(lambda o: held.append(Plain.ToPlain(store)(store.References.OfFrame.as_schema(), o)) or o)
-    return json.dumps(held[0].get("binds", {}), sort_keys=True)
+    member.as_object(lambda o: held.append(o) or o)
+    return held[0]
 
 
-def _certify(store: Any, t: _Transform, arguments: Mapping[str, Any], name: str, by: str,
-             frames: dict[str, Any]) -> Any:
+def _certify(store: Any, applied: Any, prototype: Any, assignments: Mapping[str, Any], name: str, by: str,
+             instances: dict[str, tuple[Any, Any]]) -> Any:
     """Writes the transform certificate and its sub-certificates, within the certificates' store's transaction; gives
     the transform certificate."""
     T = store.Transforms
@@ -505,48 +304,176 @@ def _certify(store: Any, t: _Transform, arguments: Mapping[str, Any], name: str,
     prev = steps.get(index - 1)
     certificate = T.TransformCertificate(lambda c: (
         c.history(lambda a: a.insert(lambda e: e.history(history).index(index)))
-        .transform(lambda a: a.insert(lambda e: e.transform(t.visitor)))
-        .prototype(lambda a: a.insert(lambda e: e.pattern(t.prototype)))
-        .arguments(dict(arguments))
+        .transform(_value(store, "References.OfObject", applied))
+        .prototype(_value(store, "References.OfObject", prototype))
+        .assignments(dict(assignments))
         .prev(lambda a: a if prev is None else a.insert(lambda e: e.before(prev)))))
     T.HistoryCertificate(history, lambda h: h.decisions(lambda a: a.insert(lambda e: e.step(certificate).by(by))))
-    for role in ROLES:
-        if role not in frames:
-            continue
-        pattern = t.patterns[role]
-        value = Plain.FromPlain(store)(store.References.OfFrame.as_schema(), frames[role])
-        instance = json.dumps(frames[role].get("binds", {}), sort_keys=True)
+    for argument, (pattern, frame) in instances.items():
+        pattern = _value(store, "References.OfObject", pattern)
+        frame = _value(store, "References.OfFrame", frame)
         preceding = next((step for at in sorted(steps, reverse=True) for step in [steps[at]]
                           for entry in step.frames
-                          if any(held.pattern is pattern for held in entry.frame.pattern)
-                          and _binds(store, entry.frame) == instance), None)
-        T.FrameCertificate(lambda f, role=role, pattern=pattern, value=value, preceding=preceding: (
-            f.step(lambda a: a.insert(lambda e: e.step(certificate).role(role)))
-            .frame(value)
-            .pattern(lambda a: a.insert(lambda e: e.pattern(pattern)))
+                          if _same(_held(entry.frame.pattern), pattern) and _same(_held(entry.frame.frame), frame)),
+                         None)
+        T.FrameCertificate(lambda f, argument=argument, pattern=pattern, frame=frame, preceding=preceding: (
+            f.step(lambda a: a.insert(lambda e: e.step(certificate).argument(argument)))
+            .frame(frame)
+            .pattern(pattern)
             .preceding(lambda a: a if preceding is None else a.insert(lambda e: e.step(preceding)))))
     return certificate
 
 
-def apply(store: Any, transform: str, arguments: Mapping[str, Any], history: str, procedures: Procedures, *,
-          source: Bound | None = None, sync: Bound | None = None, target: Bound | None = None,
-          by: str = "caller") -> Any:
-    """Applies the transform named `transform`, defined in `store`, the certificates' store, with `arguments`, a value
-    for each of its parameters, to the frames given, each a `Bound`, and appends its certificates to the history named
-    `history`, recording that `by` (`caller`, `policy` or `reused`) decided its parameters. Gives the transform
-    certificate's reference (`References.OfObject`)."""
-    if by not in BY:
-        raise ValueError(f"a step's parameters are decided by one of {list(BY)}: got {by!r}")
-    given = {role: bound for role, bound in zip(ROLES, (source, sync, target)) if bound is not None}
-    values = MappingProxyType(dict(arguments))
+def apply(transform: Any, assignments: Mapping[str, Any], procedures: Procedures, *, source: Any = None,
+          sync: Any = None, target: Any = None) -> None:
+    """Applies `transform`, a visitor of a `Transforms.Transform`, to the caller's visitors (`source`, `sync`,
+    `target`, each a `Visitors.OfPattern` or None), with `assignments`, its parameter assignments, read-only: calls its
+    procedure, and that's that. It writes nothing and opens no transaction; `certify` records the application."""
+    procedures[str(transform.procedure)](source, sync, target, MappingProxyType(dict(assignments)))
+
+
+def certify(store: Any, transform: Any, assignments: Mapping[str, Any], history: str, by: str, *,
+            source: Any = None, sync: Any = None, target: Any = None) -> Any:
+    """Certifies an application of `transform` to the caller's visitors with `assignments`: writes the certificates in
+    `store`, the certificates' store, in the one transaction mbse-transforms opens, appending them to the history named
+    `history` and recording that `by` decided the parameters; the pattern instances are read from the visitors as it is
+    called. Gives the transform certificate's reference (`References.OfObject`)."""
+    own = Proxies.store_of(transform)
+    applied, prototype = _plain(own, transform), _plain(own, _prototype(transform))
+    visitors = (source, sync, target)
+    instances = {argument: _instance(visitor) for argument, visitor in zip(ARGUMENTS, visitors) if visitor is not None}
     with store.transaction():
-        t = _transform(store, transform)
-        registered = _check(given, store, t, values, procedures)
-        if t.verify == "falsified" and not _holds(given["sync"], t.prototype):
-            raise ValueError(f"transform {t.name!r}: its prototype does not hold for the sync frame, so nothing is "
-                             "there to falsify")
-        frames = {role: _frame_plain(bound) for role, bound in given.items()}
-        _run(given, t, registered, values)
-        if t.verify == "falsified" and _holds(given["sync"], t.prototype):
-            raise VerificationError(f"transform {t.name!r}: its prototype still holds for the sync frame")
-        return References.of(store, _certify(store, t, values, history, by, frames))
+        return References.of(store, _certify(store, applied, prototype, dict(assignments), history, by, instances))
+
+
+# --- Candidates: a filter fed by a frame stream, ranked by a policy ---
+
+
+def _options(domain: Any) -> tuple[Any, ...] | None:
+    """The values of a finite domain, in order: a `bool`'s, `(False, True)`; a union's whose branches are each a value
+    object with no properties, the branches' names; None for any other, a domain left open."""
+    kind = domain.as_schema().name
+    if kind == "Schemas.OfScalar" and domain.name.get() == "Schemas.OfBool":
+        return (False, True)
+    if kind == "Schemas.OfUnion" and all(
+            branch.schema.as_schema().name == "Schemas.OfObject" and not branch.schema.ref.get()
+            and not list(branch.schema.properties) for branch in domain.branches):
+        return tuple(str(branch.name) for branch in domain.branches)
+    return None
+
+
+def _domains(store: Any, prototype: Any) -> dict[str, tuple[Any, ...] | None]:
+    """Each parameter the prototype declares, by name, in order, with its finite domain's values, or None where it is
+    open: a parameter for a value of another schema, or for an object."""
+    found: dict[str, tuple[Any, ...] | None] = {}
+    for held in Builders.OfPattern.Builder(prototype, False, store).parameters:
+        for entry in held.params.parameters:
+            parameter = Builders.OfParameter.Builder(entry.parameter, False, store)
+            found[str(entry.name)] = next((_options(end.schema) for end in parameter.for_value), None)
+    return found
+
+
+@dataclass(frozen=True, eq=False)
+class Candidate:
+    """A step a frame stream offers: a transform (`transform`, its reference; `name`, its name), the frame that passed
+    its filter (`frame`, a `Visitors.OfPattern`), values for its parameters of finite domains (`assignments`), those
+    still `open`, and the `score` a policy gave it (0.0 without one)."""
+
+    transform: Any
+    name: str
+    frame: Any = field(repr=False)
+    assignments: Mapping[str, Any]
+    open: tuple[str, ...] = ()
+    score: float = 0.0
+
+    def answer(self, **values: Any) -> Candidate:
+        """The candidate with open parameters assigned: `candidate.answer(note="fragile")`."""
+        for name in values:
+            if name not in self.open:
+                raise TypeError(f"transform {self.name!r} has no open parameter {name!r}")
+        return replace(self, assignments={**self.assignments, **values},
+                       open=tuple(n for n in self.open if n not in values))
+
+
+@dataclass(frozen=True)
+class Clause:
+    """A policy's clause: it weighs the candidates of `transform`, a transform's reference (`References.OfObject`) or
+    a sequence of them, whose assignments hold each of its `assignments`, by `weight`."""
+
+    transform: Any
+    assignments: Mapping[str, Any] = field(default_factory=dict)
+    weight: float = 1.0
+
+    def __post_init__(self) -> None:
+        if any(not hasattr(named, "as_schema") for named in self._named()):
+            raise TypeError("a clause names a transform by its reference, References.of(store, transform), or a "
+                            "sequence of them")
+
+    def _named(self) -> tuple[Any, ...]:
+        return tuple(self.transform) if isinstance(self.transform, (list, tuple)) else (self.transform,)
+
+    def applies(self, candidate: Candidate) -> bool:
+        """Whether the clause weighs the candidate."""
+        return any(_same(named, candidate.transform) for named in self._named()) and all(
+            name in candidate.assignments and candidate.assignments[name] == value
+            for name, value in self.assignments.items())
+
+
+class Policy:
+    """Ranks candidates by its clauses: a candidate's score is the sum of the weights of the clauses that apply to
+    it."""
+
+    def __init__(self, *clauses: Clause):
+        self.clauses = clauses
+
+    def score(self, candidate: Candidate) -> float:
+        return sum(clause.weight for clause in self.clauses if clause.applies(candidate))
+
+
+@dataclass
+class _Filter:
+    """What a session reads of a transform once, when it is made: its reference, name, prototype's name, and its
+    parameters' domains."""
+
+    reference: Any
+    name: str
+    prototype: str
+    domains: dict[str, tuple[Any, ...] | None]
+
+
+class Session:
+    """Candidates from a frame stream: `Session(transforms, frames)`. `transforms` are visitors of
+    `Transforms.Transform`s, read once, when it is made; `frames`, the frame stream the caller supplies, each a
+    `Visitors.OfPattern`. Iterating it pulls each frame once and gives, for each frame that passes a transform's filter,
+    its candidates: for each transform whose prototype the frame is a frame of, one per combination of its finite
+    parameters' values, the others open, in the canonical order; `ranked(policy)` gives them ranked. A session is
+    iterated once, directly or through `ranked`: iterated again, it goes on from the frames not yet pulled, none once
+    the stream is drained."""
+
+    def __init__(self, transforms: Iterable[Any], frames: Iterable[Any]):
+        self._filters = []
+        for transform in transforms:
+            prototype = _prototype(transform)
+            self._filters.append(_Filter(References.of(Proxies.store_of(transform), transform), _name(transform),
+                                         prototype.name, _domains(Proxies.store_of(transform), prototype)))
+        self._frames = iter(frames)
+
+    def _expand(self, each: _Filter, frame: Any) -> Iterator[Candidate]:
+        finite = [name for name, domain in each.domains.items() if domain is not None]
+        open_ = tuple(name for name, domain in each.domains.items() if domain is None)
+        for values in itertools.product(*(each.domains[name] or () for name in finite)):
+            yield Candidate(each.reference, each.name, frame, dict(zip(finite, values)), open_)
+
+    def __iter__(self) -> Iterator[list[Candidate]]:
+        for frame in self._frames:
+            name = frame.as_schema().name
+            found = [candidate for each in self._filters if each.prototype == name
+                     for candidate in self._expand(each, frame)]
+            if found:
+                yield found
+
+    def ranked(self, policy: Policy) -> Iterator[list[Candidate]]:
+        """The session's candidates, each frame's ranked by `policy`: by score, highest first, ties in the canonical
+        order."""
+        for found in self:
+            yield sorted((replace(c, score=policy.score(c)) for c in found), key=lambda c: -c.score)
