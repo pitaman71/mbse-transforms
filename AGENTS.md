@@ -9,6 +9,8 @@ and the certificates (suite XF), and candidates from a frame stream, ranked by a
 Python (`mbse.Transforms.Transforms`) and TypeScript (`@mbse/transforms`' `Transforms`); reruns and diffs are queries
 over the certificates, with no code of its own (suite RRN). It is built Python first, TypeScript following each stage
 with the same cases, and the certificates the same bytes in both (suite CONF, [the conformance corpus](conformance/README.md)).
+Its tutorials teach it in three case studies, the same steps and outputs in both languages, sharing `toolkit.py` and
+`toolkit.ts`.
 Two equivalent implementations exist: `python3/` (`mbse.Transforms`) and `typescript5/` (`@mbse/transforms`).
 
 ## Start here

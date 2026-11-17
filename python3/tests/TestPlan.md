@@ -16,7 +16,8 @@ One suite per notebook, with the same case IDs, in the same order, in both imple
 | `05_Reruns.ipynb` | RRN | 4 | Reruns and diffs, queries over the certificates with mbse-schemas alone, no code of mbse-transforms': a rerun finding, by a query over the certificates' store, the transform certificate in an earlier history of the same transform on the same frame, and applying and certifying with the parameter assignments it recorded, decided "reused" (RRN-01); a diff of two histories over stores that differ, by the same query and `Comparison`: added, removed (the orphans) and changed (RRN-02); what a query matches by equality in a spec: a sub-certificate by its recorded frame, a transform certificate by its transform, its parameter assignments and its sub-certificate's argument (RRN-03); the same frames and choices giving byte-identical certificates as plain data (RRN-04). |
 | `06_Conformance.ipynb` | CONF | 2 | The certificates the same data on the wire in both languages: this implementation's conformance files, suite RRN's fixture's certificates as mbse-schemas' JSON snapshot, current (CONF-01), and byte-identical to the other implementation's (CONF-02) ([the conformance corpus](../../conformance/README.md)) |
 
-Total: 22 cases.
+Total: 22 cases. The tutorials (`tutorials/`) run with the suites, as pytest's `testpaths` has it, and with
+`tests/run-notebooks.ts` in TypeScript; the skill links their steps, `Tnn.k`, which [the tutorial](../tutorials/README.md) lists.
 
 ---
 
