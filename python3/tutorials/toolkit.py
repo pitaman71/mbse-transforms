@@ -122,7 +122,7 @@ def assignments_of(certificate: Any) -> dict[str, Any]:
 
     def each(entries: Any) -> Any:
         for name, value in entries:
-            value.as_scalar(lambda s, name=name: found.__setitem__(name, s.get()) or s)
+            value.as_scalar(lambda s: found.__setitem__(name, s.get()) or s)
         return entries
 
     certificate.assignments.as_value(lambda a: a.as_container(lambda c: c.as_entries(each) or c) or a)
