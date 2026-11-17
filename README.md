@@ -16,7 +16,7 @@ for now, is called with up to three arguments, each a `Visitors.OfPattern` the c
 application, under a history certificate for the whole sequence. Its packages are `mbse.Transforms` in Python and
 `@mbse/transforms` in TypeScript, one library in two languages, built Python first.
 
-Built so far, in Python: the repository's conventions (both packages, the skill, the notebook test suites and the
+Built so far, in Python and TypeScript alike: the repository's conventions (both packages, the skill, the notebook test suites and the
 tutorials' frame), and the first release's second and third stages, `mbse.Transforms.Transforms`: a transform's model,
 installed as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
 (`Transforms.Procedures`); the application of a transform with the caller's visitors (`Transforms.apply`), which calls
@@ -26,10 +26,12 @@ names, the caller verifying, if at all, between the two; and candidates from a f
 supplies (`Transforms.Session`), ranked by a policy in a follow-up call (`Session.ranked`, `Transforms.Policy`,
 `Transforms.Clause`), which the caller takes by applying them with its own visitors; and its fourth stage, reruns and
 diffs, which need no code of mbse-transforms': they are queries over the certificates, made with mbse-schemas'
-transactions and `Comparison` alone (suite RRN). Why it exists and what it
+transactions and `Comparison` alone (suite RRN). The TypeScript package mirrors the Python one: the same suites, case
+for case, and the same certificates, byte for byte ([the conformance corpus](conformance/README.md), suite CONF); what
+the language changes is listed in [Equivalence](docs/EQUIVALENCE.md). Why it exists and what it
 is to be are in [its charter](docs/proposals/charter/README.md), and its first release in
 [the first-release proposal](docs/proposals/first-release/README.md), with the gaps in mbse-schemas that building it
-found. The TypeScript package follows the Python one as a later stage.
+found.
 
 ## Getting started
 
@@ -52,6 +54,14 @@ uv sync --all-extras
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 ```
 
+TypeScript (Node 22 or later; `.nvmrc` names 24); `npm install` installs mbse-schemas' TypeScript from its checkout:
+
+```sh
+cd typescript5
+nvm use && npm install
+npm run coverage   # type-checks, runs every notebook, gates at 100%
+```
+
 ## Documentation
 
 | Read | For |
@@ -60,7 +70,8 @@ uv run coverage run -m pytest && uv run coverage combine && uv run coverage repo
 | mbse-basis [FEA-021: every generation ambiguity a parameter](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-021.md) | The feature it builds, and its capabilities' detail files |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-transforms/SKILL.md) | Guidance for AI agents. The skill also ships inside both packages |
-| [Python test plan](python3/tests/TestPlan.md) | The test suites |
+| [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
+| [Conformance corpus](conformance/README.md) | The certificates both implementations write, byte for byte |
 
 ---
 

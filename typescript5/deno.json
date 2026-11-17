@@ -4,6 +4,8 @@
     "sloppy-imports"
   ],
   "imports": {
+    "@mbse/schemas/Framework": "../../mbse-schemas/typescript5/src/Framework/index.ts",
+    "@mbse/schemas/Framework/": "../../mbse-schemas/typescript5/src/Framework/",
     "@mbse/transforms": "./src/index.ts"
   }
 }
