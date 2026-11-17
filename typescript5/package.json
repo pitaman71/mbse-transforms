@@ -11,9 +11,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "postinstall": "python3 ../../mbse-basis/scripts/polyrepo.py check",
+    "postinstall": "python3 ../../mbse-basis/scripts/polyrepo.py check && npm --prefix ../../mbse-schemas/typescript5 install --no-audit --no-fund",
     "typecheck": "tsc --noEmit",
     "test": "tsx tests/run-notebooks.ts --typecheck",
+    "conformance": "tsx tests/conformance.ts",
     "coverage": "c8 --check-coverage --100 tsx tests/run-notebooks.ts --typecheck"
   },
   "devDependencies": {
@@ -21,5 +22,8 @@
     "c8": "^11.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@mbse/schemas": "file:../../mbse-schemas/typescript5"
   }
 }
