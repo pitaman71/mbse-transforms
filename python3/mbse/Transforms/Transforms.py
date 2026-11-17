@@ -45,42 +45,45 @@ and the parameter assignments, and that's that: `procedure(source, sync, target,
 "Transforms may not make decisions below the parameter level. Discrete decisions in a transformation procedure must
 themselves be modeled as discrete transforms with non-overlapping patterns."
 
-`apply(store, transform, assignments, history, procedures, source=..., sync=..., target=..., verify=..., by=...)`
-receives the caller's visitors, the transform (a visitor of a `Transforms.Transform`), the parameter assignments, the
-history's name, and `store`, the certificates' store, as the caller gives it. It calls the procedure with the visitors
-and the assignments; then, only if the caller asks (`verify`), the caller's verification with the same visitors ("the
-pattern constraint - application may optionally verify that the pattern is falsified by the application or more
-generally an additional metric that computes recursion progress toward termination"); then it writes the certificates.
-**The only transaction mbse-transforms opens is the one that writes the certificates, in `store`.** It opens none on the
-visitors' stores: the visitors are the caller's, within the caller's transactions, which commit or roll back what the
-procedure wrote. Since mbse-schemas' transactions do not nest, `store` is one in which the caller holds no transaction
-open while it applies: neither a visitor's store nor the transform's. `store` holds `Transforms.install`.
+`apply(transform, assignments, procedures, source=..., sync=..., target=...)` receives the caller's visitors, the
+transform (a visitor of a `Transforms.Transform`) and the parameter assignments. It calls the transform's procedure with
+the visitors and the assignments, and that's that: it writes nothing and opens no transaction. A follow-up call,
+`certify(store, transform, assignments, history, by, source=..., sync=..., target=...)`, writes the certificates, in
+`store`, the certificates' store, as the caller gives it: appended to the history named `history`, recording that `by`
+decided the parameters. The caller verifies, if at all, with its own call between the two ("the pattern constraint -
+application may optionally verify that the pattern is falsified by the application or more generally an additional
+metric that computes recursion progress toward termination"): a failed verification is simply not certifying.
+**The only transaction mbse-transforms opens is the one `certify` writes the certificates in, in `store`.** It opens
+none on the visitors' stores: the visitors are the caller's, within the caller's transactions, which commit or roll
+back what the procedure wrote. Since mbse-schemas' transactions do not nest, `store` is one in which the caller holds
+no transaction open while it certifies: neither a visitor's store nor the transform's. `store` holds
+`Transforms.install`.
 
 Decided here *(agent)*, each for review:
 
 - **The transform is given as a visitor** of its `Transforms.Transform`, within the caller's transaction on the
   transforms' store, as the arguments are.
-- **A sub-certificate's pattern instance is read from its visitor before the procedure runs**: each symbol of the
+- **A sub-certificate's pattern instance is read from its visitor when `certify` is called**: each symbol of the
   visitor's pattern (`as_schema()`), its member's reference (`References.of`), in the store the first member is in;
   the frame's bindings only, as `References.of` gives them for a mapping.
 - **The assignments are given to the procedure read-only**, so that the certificate records what it was given.
 - **The preceding transform for a pattern instance** is the latest earlier transform certificate on the same history
   with a sub-certificate whose `pattern` and `frame` are equal as values (mbse-schemas' `Comparison`), whatever its
   argument.
-- **The verification** is a callable, `verify(source, sync, target, assignments)`, called once, after the procedure;
-  where it returns a false value, `VerificationError` is raised and no certificate is written. A falsification is the
-  caller's evaluation of the prototype; a metric, the caller's comparison of a value it computed before applying.
-- **The history is created by its first application**, under its name; a procedure's return value is ignored.
+- **The verification** is the caller's own call, after `apply` and before `certify`; where it fails, the caller does
+  not certify, and no certificate is written. A falsification is the caller's evaluation of the prototype; a metric,
+  the caller's comparison of a value it computed before applying.
+- **The history is created by its first certification**, under its name; a procedure's return value is ignored.
 - **A registry is a value** the caller makes and gives each application; none is global, as no store is (CAP-161).
 
 **Candidates**: "The transform candidates must come from a filter fed by a frame stream. That's how Store works, no?"
-A `Session(transforms, frames, policy)` is that filter: `transforms`, visitors of `Transforms.Transform`s, read once,
+A `Session(transforms, frames)` is that filter: `transforms`, visitors of `Transforms.Transform`s, read once,
 when it is made; `frames`, the frame stream the caller supplies, each frame a `Visitors.OfPattern`. Iterating it pulls
 each frame once and gives its candidates: for each transform whose prototype the frame is a frame of, one candidate per
 combination of the values of the parameters whose domains are finite, any other parameter left open
-(`Candidate.answer(**values)`), in a canonical order, ranked by the policy. "In a streaming system termination
-conditions are relative": it ends when the stream does, and queries nothing again. The caller takes a candidate by
-applying it with its own visitors.
+(`Candidate.answer(**values)`), in a canonical order. A follow-up call, `session.ranked(policy)`, gives the same
+candidates ranked by the policy. "In a streaming system termination conditions are relative": it ends when the stream
+does, and queries nothing again. The caller takes a candidate by applying it with its own visitors.
 
 Decided here for the candidates *(agent)*, each for review:
 
@@ -92,7 +95,8 @@ Decided here for the candidates *(agent)*, each for review:
   parameters in the order the prototype declares them. A policy ranks one frame's candidates: by score, highest first,
   ties in the canonical order.
 - **Iterating a session gives each frame's candidates as a list**, one frame at a time, as it is pulled; a frame that
-  passes no transform's filter gives none.
+  passes no transform's filter gives none. Its frames are pulled once, so a session is iterated once, directly or
+  through `ranked`: iterated again, it goes on from the frames not yet pulled, none once the stream is drained.
 - **A clause names transforms by object reference** (`References.OfObject`, PRI-015), one or a sequence of them,
   compared as values (mbse-schemas' `Comparison`); it applies to a candidate of a transform it names whose assignments
   hold each of the clause's assignments. A candidate's score is the sum of the weights of the clauses that apply.
@@ -114,8 +118,8 @@ __all__ = [
     "Policy",
     "Procedures",
     "Session",
-    "VerificationError",
     "apply",
+    "certify",
     "define",
     "install",
 ]
@@ -214,10 +218,6 @@ def define(txn: Any, name: str, procedure: str, prototype: Any) -> Any:
         ])]))])
 
 
-class VerificationError(ValueError):
-    """An application whose verification, the caller's, returned a false value."""
-
-
 class Procedures:
     """A registry of procedures, each a native function `procedure(source, sync, target, assignments)` registered by
     name. A registry is a value the caller makes and gives each application."""
@@ -225,10 +225,8 @@ class Procedures:
     def __init__(self) -> None:
         self._registered: dict[str, Procedure] = {}
 
-    def register(self, name: str, procedure: Procedure | None = None) -> Any:
-        """Registers `procedure` under `name`; without a procedure, a decorator that does. A name is registered once."""
-        if procedure is None:
-            return lambda given: self.register(name, given)
+    def register(self, name: str, procedure: Procedure) -> Procedure:
+        """Registers `procedure` under `name`. A name is registered once."""
         if name in self._registered:
             raise ValueError(f"a procedure is registered as {name!r} already")
         self._registered[name] = procedure
@@ -326,26 +324,26 @@ def _certify(store: Any, applied: Any, prototype: Any, assignments: Mapping[str,
     return certificate
 
 
-def apply(store: Any, transform: Any, assignments: Mapping[str, Any], history: str, procedures: Procedures, *,
-          source: Any = None, sync: Any = None, target: Any = None,
-          verify: Callable[[Any, Any, Any, Mapping[str, Any]], Any] | None = None, by: str = "caller") -> Any:
+def apply(transform: Any, assignments: Mapping[str, Any], procedures: Procedures, *, source: Any = None,
+          sync: Any = None, target: Any = None) -> None:
     """Applies `transform`, a visitor of a `Transforms.Transform`, to the caller's visitors (`source`, `sync`,
-    `target`, each a `Visitors.OfPattern` or None), with `assignments`, its parameter assignments: calls its procedure;
-    then, where the caller gives `verify`, calls it with the same visitors, raising `VerificationError` where it returns
-    a false value; then writes the certificates, in `store`, the certificates' store, in the one transaction
-    mbse-transforms opens, appending them to the history named `history` and recording that `by` decided the
-    parameters. Gives the transform certificate's reference (`References.OfObject`)."""
-    procedure = procedures[str(transform.procedure)]
+    `target`, each a `Visitors.OfPattern` or None), with `assignments`, its parameter assignments, read-only: calls its
+    procedure, and that's that. It writes nothing and opens no transaction; `certify` records the application."""
+    procedures[str(transform.procedure)](source, sync, target, MappingProxyType(dict(assignments)))
+
+
+def certify(store: Any, transform: Any, assignments: Mapping[str, Any], history: str, by: str, *,
+            source: Any = None, sync: Any = None, target: Any = None) -> Any:
+    """Certifies an application of `transform` to the caller's visitors with `assignments`: writes the certificates in
+    `store`, the certificates' store, in the one transaction mbse-transforms opens, appending them to the history named
+    `history` and recording that `by` decided the parameters; the pattern instances are read from the visitors as it is
+    called. Gives the transform certificate's reference (`References.OfObject`)."""
     own = Proxies.store_of(transform)
     applied, prototype = _plain(own, transform), _plain(own, _prototype(transform))
     visitors = (source, sync, target)
     instances = {argument: _instance(visitor) for argument, visitor in zip(ARGUMENTS, visitors) if visitor is not None}
-    values = MappingProxyType(dict(assignments))
-    procedure(*visitors, values)
-    if verify is not None and not verify(*visitors, values):
-        raise VerificationError(f"transform {_name(transform)!r}: its verification failed")
     with store.transaction():
-        return References.of(store, _certify(store, applied, prototype, values, history, by, instances))
+        return References.of(store, _certify(store, applied, prototype, dict(assignments), history, by, instances))
 
 
 # --- Candidates: a filter fed by a frame stream, ranked by a policy ---
@@ -444,21 +442,21 @@ class _Filter:
 
 
 class Session:
-    """Candidates from a frame stream, ranked by a policy: `Session(transforms, frames, policy)`. `transforms` are
-    visitors of `Transforms.Transform`s, read once, when it is made; `frames`, the frame stream the caller supplies,
-    each a `Visitors.OfPattern`. Iterating it pulls each frame once and gives, for each frame that passes a transform's
-    filter, its candidates: for each transform whose prototype the frame is a frame of, one per combination of its
-    finite parameters' values, the others open, in the canonical order, ranked by `policy`'s score where it is
-    given."""
+    """Candidates from a frame stream: `Session(transforms, frames)`. `transforms` are visitors of
+    `Transforms.Transform`s, read once, when it is made; `frames`, the frame stream the caller supplies, each a
+    `Visitors.OfPattern`. Iterating it pulls each frame once and gives, for each frame that passes a transform's filter,
+    its candidates: for each transform whose prototype the frame is a frame of, one per combination of its finite
+    parameters' values, the others open, in the canonical order; `ranked(policy)` gives them ranked. A session is
+    iterated once, directly or through `ranked`: iterated again, it goes on from the frames not yet pulled, none once
+    the stream is drained."""
 
-    def __init__(self, transforms: Iterable[Any], frames: Iterable[Any], policy: Policy | None = None):
+    def __init__(self, transforms: Iterable[Any], frames: Iterable[Any]):
         self._filters = []
         for transform in transforms:
             prototype = _prototype(transform)
             self._filters.append(_Filter(References.of(Proxies.store_of(transform), transform), _name(transform),
                                          prototype.name, _domains(Proxies.store_of(transform), prototype)))
         self._frames = iter(frames)
-        self.policy = policy
 
     def _expand(self, each: _Filter, frame: Any) -> Iterator[Candidate]:
         finite = [name for name, domain in each.domains.items() if domain is not None]
@@ -471,8 +469,11 @@ class Session:
             name = frame.as_schema().name
             found = [candidate for each in self._filters if each.prototype == name
                      for candidate in self._expand(each, frame)]
-            if not found:
-                continue
-            if self.policy is not None:
-                found = sorted((replace(c, score=self.policy.score(c)) for c in found), key=lambda c: -c.score)
-            yield found
+            if found:
+                yield found
+
+    def ranked(self, policy: Policy) -> Iterator[list[Candidate]]:
+        """The session's candidates, each frame's ranked by `policy`: by score, highest first, ties in the canonical
+        order."""
+        for found in self:
+            yield sorted((replace(c, score=policy.score(c)) for c in found), key=lambda c: -c.score)

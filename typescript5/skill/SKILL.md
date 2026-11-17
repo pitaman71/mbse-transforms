@@ -70,13 +70,14 @@ transforms yet. For the data transforms rewrite, use the
    pattern frame bound to a source copy that is not to be disturbed (nondestructive)", "`sync`- a writeable
    `Visitors.OfPattern` bearing a pattern frame bound to a copy that is to be edited in place (destructive)", and
    "`target`- a writeable `Visitors.OfPattern` bearing a pattern frame bound to a (usually empty) copy that is to be
-   replaced (constructive)". Then call `Transforms.apply(store, transform, assignments, history, procedures,
-   source=..., sync=..., target=..., verify=..., by=...)`: `store`, the certificates' store, in which you hold no
-   transaction open; `transform`, the visitor of its `Transforms.Transform`; `by`, who decided the parameters. It calls
-   the procedure, then, only where you give `verify`, your verification with the same visitors (the prototype
-   falsified, or a metric decreased), raising `VerificationError` where it returns a false value, and then writes the
-   certificates in the one transaction it opens, in `store`. Your transactions commit or roll back what the procedure
-   wrote. It gives back the transform certificate's reference. The history certificate (`Transforms.TheHistories`, by
+   replaced (constructive)". Then call `Transforms.apply(transform, assignments, procedures, source=..., sync=...,
+   target=...)`: `transform`, the visitor of its `Transforms.Transform`. It calls the procedure, and that's that: it
+   writes nothing and opens no transaction. Verify, if at all, with your own call, with the same visitors (the
+   prototype falsified, or a metric decreased); where it fails, don't certify. Then call
+   `Transforms.certify(store, transform, assignments, history, by, source=..., sync=..., target=...)`: `store`, the
+   certificates' store, in which you hold no transaction open; `by`, who decided the parameters. It writes the
+   certificates in the one transaction mbse-transforms opens, in `store`. Your transactions commit or roll back what
+   the procedure wrote. It gives back the transform certificate's reference. The history certificate (`Transforms.TheHistories`, by
    name) holds the steps in order and who decided each; a transform certificate its assignments, its transform and
    prototype, and `prev` and `next`; a sub-certificate per argument given the pattern instance its visitor bore, a
    `References.OfFrame`, its pattern, and the step before it on that instance.
@@ -84,22 +85,23 @@ transforms yet. For the data transforms rewrite, use the
    - Python: [XF-04: The arguments are the caller's: the source read, the sync edited in place and the target built, each a visitor bearing its own pattern frame, in the caller's transactions, which commit or roll back what the procedure wrote](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-04)
    - Python: [XF-05: Parameters: the transform certificate records the parameter assignments, and the history certificate who decided them, as the caller says](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-05)
    - Python: [XF-06: Certificates are written and linked: the history's sequence, prev and next, the transform and its prototype, a sub-certificate for each argument present holding the pattern instance its visitor bore, and the chain of each pattern instance; all of it data, written and read back as any](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-06)
-   - Python: [XF-07: Verification, only where the caller asks: the caller's verification, called after the procedure with the same visitors (the prototype falsified, or a metric decreased); where it fails, no certificate is written](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-07)
+   - Python: [XF-07: Verification is the caller's own call, between apply and certify, with the same visitors (the prototype falsified, or a metric decreased); where it fails, the caller does not certify, and no certificate is written](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-07)
    - Python: [XF-08: What an application refuses: a transform with no prototype, and a procedure that raises writes nothing](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-08)
 5. **Take candidates from a frame stream, ranked by a policy.** *Why*: "The transform candidates must come from a
    filter fed by a frame stream", so that every choice is offered as a candidate the caller, or a policy the caller
    chose, decides ([PRI-014: every ambiguity a decision](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-014)); "In a
    streaming system termination conditions are relative", so what it offers, and when it ends, is relative to the
    stream you supply. *When*: choosing what to apply. *How*: within your transactions, make
-   `Transforms.Session(transforms, frames, policy)`: `transforms`, visitors of the transforms to consider, in the order
-   that breaks ties; `frames`, your frame stream, each frame a `Visitors.OfPattern`; `policy`, optional. Iterate it:
+   `Transforms.Session(transforms, frames)`: `transforms`, visitors of the transforms to consider, in the order
+   that breaks ties; `frames`, your frame stream, each frame a `Visitors.OfPattern`. Iterate it once, directly or
+   ranked by a policy (`session.ranked(policy)`):
    it pulls each frame once and gives that frame's candidates, for each transform whose prototype the frame is a frame
    of, one per value of each finite parameter (a `bool`, or a union of options, empty value objects named by their
    branches), other parameters open, which `answer(**values)` assigns. A policy,
    `Transforms.Policy(Transforms.Clause(transform, assignments, weight), ...)`, names transforms by object reference
    (`References.of(store, transform)`), one or several, and ranks each frame's candidates by the sum of the weights of
    the clauses that apply. Take a candidate by applying it with your own visitors (its `frame` among them, as the
-   argument you choose), giving `by`, who decided it.
+   argument you choose), and certifying it, giving `by`, who decided it.
    [CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md).
    - Python: [SES-01: The filter is each transform's prototype: a frame passes where it is a frame of the prototype, and becomes candidates, one per combination of its finite parameters' values (a bool's; a union of options' names), any other parameter left open, in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-01)
    - Python: [SES-02: A session consumes its stream: each frame is pulled once, as the caller iterates, and nothing is queried again; it ends when the stream does](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-02)

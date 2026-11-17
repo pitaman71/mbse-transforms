@@ -20,9 +20,10 @@ Built so far, in Python: the repository's conventions (both packages, the skill,
 tutorials' frame), and the first release's second and third stages, `mbse.Transforms.Transforms`: a transform's model,
 installed as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
 (`Transforms.Procedures`); the application of a transform with the caller's visitors (`Transforms.apply`), which calls
-the procedure, then, only where the caller asks, the caller's verification, and writes the history, transform and
-sub-certificates in the one transaction it opens, in the certificates' store the caller names; and candidates from a
-filter fed by a frame stream the caller supplies (`Transforms.Session`), ranked by a policy (`Transforms.Policy`,
+the procedure, and that's that; its certification, a follow-up call (`Transforms.certify`), which writes the history,
+transform and sub-certificates in the one transaction mbse-transforms opens, in the certificates' store the caller
+names, the caller verifying, if at all, between the two; and candidates from a filter fed by a frame stream the caller
+supplies (`Transforms.Session`), ranked by a policy in a follow-up call (`Session.ranked`, `Transforms.Policy`,
 `Transforms.Clause`), which the caller takes by applying them with its own visitors. Reruns follow. Why it exists and what it
 is to be are in [its charter](docs/proposals/charter/README.md), and its first release in
 [the first-release proposal](docs/proposals/first-release/README.md), with the gaps in mbse-schemas that building it

@@ -60,17 +60,19 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    it is a frame of, read from the visitor (`as_schema()`).
 2. **Procedures**: native functions registered by name, called with the caller's visitors and the parameter
    assignments, and that's that: `procedure(source, sync, target, assignments)`, each visitor or None.
-3. **The application**, `apply`: it receives the caller's visitors (`source`, `sync`, `target`, any absent), the
-   transform, the parameter assignments, the history and the certificates' store as the caller gives it. It calls the
-   procedure, then, only if the caller asks, the caller's verification (falsification or a metric) with the same
-   visitors, then writes the transform certificate and its sub-certificates, each linking the preceding transform
-   certificate for its pattern instance on the same history, and records on the history certificate who decided the
-   parameters. The only transaction it opens is the one that writes the certificates, in the store the caller names;
-   the visitors' transactions are the caller's.
+3. **The application**, `apply(transform, assignments, procedures, source=..., sync=..., target=...)`: it receives
+   the caller's visitors (`source`, `sync`, `target`, any absent), the transform and the parameter assignments, and
+   calls the procedure, and that's that. The caller verifies, if at all (falsification or a metric), with its own call
+   with the same visitors; where it fails, it does not certify. A follow-up call,
+   `certify(store, transform, assignments, history, by, source=..., sync=..., target=...)`, given the certificates'
+   store as the caller gives it, writes the transform certificate and its sub-certificates, each linking the preceding
+   transform certificate for its pattern instance on the same history, and records on the history certificate who
+   decided the parameters. The only transaction mbse-transforms opens is the one `certify` writes the certificates in,
+   in the store the caller names; the visitors' transactions are the caller's.
 4. **Candidates**, `Session`: a filter fed by a frame stream the caller supplies, each frame a `Visitors.OfPattern`.
    The filter is each transform's prototype: a frame passes where it is a frame of the prototype. A passing frame
-   becomes candidates, expanded over its finite parameter domains, in a canonical order, ranked by a policy (the
-   precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
+   becomes candidates, expanded over its finite parameter domains, in a canonical order; a follow-up call,
+   `session.ranked(policy)`, ranks them by a policy (the precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
    queried again, and termination is relative to the stream. The caller takes a candidate by applying it with its own
    visitors.
 5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): an earlier
