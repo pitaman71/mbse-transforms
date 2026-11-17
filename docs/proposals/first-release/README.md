@@ -75,24 +75,25 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    `session.ranked(policy)`, ranks them by a policy (the precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
    queried again, and termination is relative to the stream. The caller takes a candidate by applying it with its own
    visitors.
-5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): an earlier
-   history certificate's transform certificates' parameters reused where the same transform applies to the same
+5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): the parameter
+   assignments that an earlier history's transform certificates recorded reused where the same transform applies to the same
    frame, the earlier ones that no longer apply reported (orphans), and two histories compared (added, removed,
    changed).
 
 ## Stage 4: reruns and diffs (a design, for review)
 
 [CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md):
-an earlier history's parameter assignments reused where the same transform applies to the same frame, and two histories
-compared. Two calls, and nothing else:
+the parameter assignments an earlier transform certificate recorded reused where the same transform applies to the same
+frame, and two histories' transform certificates compared. Only a transform is parametric; a history, a certificate, a
+transaction, a change and a journal record values and declare no parameter. Two calls, and nothing else:
 
-1. **`reused(store, history, candidate)`**: the parameter assignments that the history named `history`, in the
-   certificates' store `store`, recorded for `candidate`'s transform on `candidate`'s frame, or none where it recorded
-   none. The caller then applies and certifies the candidate with them, `by` `"reused"`, as with any decision of its
+1. **`reused(store, history, candidate)`**: the parameter assignments recorded by the transform certificate, in the
+   history named `history` in the certificates' store `store`, of `candidate`'s transform on `candidate`'s frame, or
+   none where the history holds no such certificate. The caller then applies and certifies the candidate with them, `by` `"reused"`, as with any decision of its
    own; nothing is taken for it.
 2. **`diff(store, earlier, later)`**: two histories compared, their transform certificates matched by transform and
    pattern instance: **added**, in the later history only; **removed**, in the earlier history only, which are the
-   orphans, earlier decisions that no longer apply; **changed**, in both, with other parameter assignments.
+   orphans, earlier decisions that no longer apply; **changed**, in both, the two certificates having recorded other parameter assignments.
 
 *(agent)* A transform is the same where its object reference is equal; a frame is the same where its pattern instance
 is equal as a value (its pattern and the object references its symbols bind, compared by mbse-schemas' `Comparison`),
