@@ -113,6 +113,12 @@ schemas' store, its `target` the module's, so it combines no stores, which mbse-
 predicates move to mbse-schemas' `OfPattern` where they are structural, and into procedures' verifications where they
 need expressions until CAP-142 (mbse-patterns' charter, Decided, 3).
 
+
+Transforms to and from program trees match whole files: a pattern's symbols bind reference objects, and mbse-programs'
+statements, clauses and class members are values within a file. As the user decided, "the granularity at which we can
+write transforms to/from AST is at the file level. This is acceptable temporarily and might streamline implementation a
+bit. We can open a future capability that allows transforms to target value objects"
+([CAP-317: transforms targeting value objects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-317)).
 ## Decided
 
 As the user decided, on the questions as posed:
