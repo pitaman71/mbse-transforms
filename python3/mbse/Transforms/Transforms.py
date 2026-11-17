@@ -1,5 +1,6 @@
-"""Transforms: a transform's model, its procedure, its application to up to three frames, and the certificates that
-record each application ([CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md);
+"""Transforms: a transform's model, its procedure, its application to up to three frames, the certificates that
+record each application, and the session that applies them step by step
+([CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md);
 [CAP-075: steps linked to what they matched and wrote](mbse:mbse-basis/docs/capabilities/CAP-075.md)).
 
 The models are mbse-schemas data, installed by `install(txn)`, read and written through mbse-schemas' generic API
@@ -82,29 +83,77 @@ Decided here *(agent)*, each for review:
   itself, is presented as itself.
 - **A registry is a value** the caller makes and gives each application; none is global, as no store is (CAP-161).
 - **The history is created by its first application**, under its name; a procedure's return value is ignored.
+
+A **session**, `Session(store, transforms, history, procedures, source=..., target=...)`, is the caller of
+applications, which procedures never see. It finds its **candidates** (`candidates(policy)`): each match of each
+transform's prototype that no step of its history took, once per combination of the values of the parameters whose
+domains are finite (a `bool`'s, `(False, True)`; a union's whose branches are each a value object with no properties,
+the branches' names), any other parameter left open, answered with `Candidate.answer(**values)`. They come in a
+canonical order: the candidates of transforms with parameters first, then by the transforms' order, by their matches
+(each object numbered when the session first sees it), and by their values' order in their domains. `take(candidate)`
+binds the candidate's frames, applies its transform and records the step, decided by the caller; `step_over(policy)`
+takes the candidate a policy ranks first, answering its open parameters from the policy, decided by the policy; and
+`run(policy)` steps over until it cannot. `done` says no candidate is left. Resolution is linear: the candidates are
+found again after each step. A **policy** (`Policy(*clauses)`) only ranks: a candidate's score is the sum of the
+weights of the clauses that apply to it, each `Clause(transform, arguments, weight)` naming one transform or several,
+and agreeing with the candidate's arguments or its open parameters, which it answers; ties keep the canonical order,
+and a candidate scoring 0 or less is not the policy's to take. The history certificate records who decided each step,
+the caller or the policy; `reused` comes with reruns.
+
+Decided here for the session *(agent)*, each for review:
+
+- **A match is found where the prototype is**: in the source, for a transform that takes one, else in the sync, as
+  `apply` has it. A source never changes, so the session knows a match a transform took by its history: **a step of
+  the same transform with a sub-certificate, in the role matched, binding the same objects** (its `References.OfFrame`
+  `binds` equal) took it, whatever its arguments, and it is not offered again. The same holds in the sync, so that a
+  transform that does not falsify its prototype still terminates; one that does leaves the sync's matches as well.
+- **A session keeps a history of its own, begun empty**: it refuses a history that holds steps, since the copies it
+  makes hold none of them. Reruns give an earlier history to a session apart from its own.
+- **The frames are bound when a candidate is taken**: the match, in the role matched; in the sync, where the match is
+  the source's, the frame of the sync's pattern binding, to each symbol it shares with the prototype, the object the
+  match binds as copied (at the same path; a schema object, as itself, by its name); in the target, the frame of the
+  target's pattern in the caller's target store. Each must be its pattern's one frame so bound, or the step is refused
+  before anything runs.
+- **The sync is a copy made from the source's snapshot** (`session.sync`), made when the session is, where a
+  transform takes a sync. A store over the source (`Builders.Store(source)`) does not keep the source undisturbed:
+  mbse-schemas 0.28 sends each of its writes through to the store below (CAP-285), and refuses a pattern that declares
+  parameters there (Gaps found, 8). The target is the caller's, usually empty.
+- **A clause names transforms by reference** (`Transforms.reference(store, name)`, PRI-015: a concrete reference is
+  programmatic), one or a sequence of them, so that one clause weighs a family of transforms, such as those sharing a
+  reason across kinds; references compare as values (mbse-schemas' `Comparison`), so they are the certificates'
+  store's. A clause may give any subset of the parameters; an argument agrees only with a value of the same type.
+- **Objects are numbered by their paths**, in the order the executor gives back the frames, across the source and the
+  sync, whose objects share their paths; the numbers are kept for the session, since a step may reorder an extent.
+- **Without a policy, `step_over` and `run` take nothing**: every choice is the caller's.
 """
 
 from __future__ import annotations
 
 import contextlib
+import itertools
 import json
-from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any
 
-from mbse.Schemas.Framework import Builders, Plain, Proxies, References
+from mbse.Schemas.Framework import Builders, Comparison, Plain, References
 
 __all__ = [
     "BY",
     "ROLES",
     "VERIFY",
     "Bound",
+    "Candidate",
+    "Clause",
+    "Policy",
     "Procedures",
+    "Session",
     "VerificationError",
     "apply",
     "define",
     "install",
+    "reference",
 ]
 
 ROLES = ("source", "sync", "target")
@@ -550,3 +599,312 @@ def apply(store: Any, transform: str, arguments: Mapping[str, Any], history: str
         if t.verify == "falsified" and _holds(given["sync"], t.prototype):
             raise VerificationError(f"transform {t.name!r}: its prototype still holds for the sync frame")
         return References.of(store, _certify(store, t, values, history, by, frames))
+
+
+# --- The session: candidates, copies, policies ---
+
+
+def reference(store: Any, name: str) -> Any:
+    """The reference (`References.OfObject`) of the transform named `name` in the catalog of `store`, the
+    certificates' store: what a `Clause` names, and a `Candidate` holds."""
+    with store.transaction():
+        return References.of(store, _transform(store, name).visitor)
+
+
+def _same(a: Any, b: Any) -> bool:
+    """Whether two arguments are the same value, of the same type: `True` is not `1`."""
+    return type(a) is type(b) and a == b
+
+
+def _same_object(a: Any, b: Any) -> bool:
+    """Whether two references designate the same object: equal as values of their schema (mbse-schemas'
+    `Comparison`); references made in different stores are incomparable, and so not the same."""
+    return Comparison.OfObject(a.as_schema(), a).compare(Comparison.OfObject(b.as_schema(), b)) == 0
+
+
+def _options(domain: Any) -> tuple[Any, ...] | None:
+    """The values of a finite domain, in order: a `bool`'s, `(False, True)`; a union's whose branches are each a value
+    object with no properties, the branches' names; None for any other, a domain left open."""
+    kind = domain.as_schema().name
+    if kind == "Schemas.OfScalar" and domain.name.get() == "Schemas.OfBool":
+        return (False, True)
+    if kind == "Schemas.OfUnion" and all(
+            branch.schema.as_schema().name == "Schemas.OfObject" and not branch.schema.ref.get()
+            and not list(branch.schema.properties) for branch in domain.branches):
+        return tuple(str(branch.name) for branch in domain.branches)
+    return None
+
+
+def _domains(store: Any, prototype: Any) -> dict[str, tuple[Any, ...] | None]:
+    """Each parameter the prototype declares, by name, in order, with its finite domain's values, or None where it is
+    open: a parameter for a value of another schema, or for an object."""
+    found: dict[str, tuple[Any, ...] | None] = {}
+    for held in Builders.OfPattern.Builder(prototype, False, store).parameters:
+        for entry in held.params.parameters:
+            parameter = Builders.OfParameter.Builder(entry.parameter, False, store)
+            found[str(entry.name)] = next((_options(end.schema) for end in parameter.for_value), None)
+    return found
+
+
+@dataclass(frozen=True, eq=False)
+class Candidate:
+    """A step a session offers: a transform (`transform`, its reference; `name`, its name), a match of its prototype
+    (`match`, a frame: each symbol and its object's reference), values for its parameters of finite domains
+    (`arguments`), those still `open`, and the `score` a policy gave it (0.0 without one)."""
+
+    transform: Any
+    name: str
+    match: Mapping[str, Any]
+    arguments: Mapping[str, Any]
+    open: tuple[str, ...] = ()
+    score: float = 0.0
+    order: tuple[int, ...] = field(default=(), repr=False)  # its place in the canonical order
+    where: str = field(default="", repr=False)  # its match, as the sub-certificate of its frame would hold it
+
+    def answer(self, **values: Any) -> Candidate:
+        """The candidate with open parameters answered: `candidate.answer(note="fragile")`."""
+        for name in values:
+            if name not in self.open:
+                raise TypeError(f"transform {self.name!r} has no open parameter {name!r}")
+        return replace(self, arguments={**self.arguments, **values}, open=tuple(n for n in self.open if n not in values))
+
+
+@dataclass(frozen=True)
+class Clause:
+    """A policy's clause: it weighs the candidates of `transform`, a transform's reference (`Transforms.reference`) or
+    a sequence of them, that agree with its `arguments`, by `weight`. An argument agrees with a candidate's value for
+    that parameter, the same value of the same type, or with a parameter the candidate leaves open, which it then
+    answers; a clause with an argument for a parameter the transform does not have weighs none of its candidates."""
+
+    transform: Any
+    arguments: Mapping[str, Any] = field(default_factory=dict)
+    weight: float = 1.0
+
+    def __post_init__(self) -> None:
+        if any(not hasattr(named, "as_schema") for named in self._named()):
+            raise TypeError("a clause names a transform by its reference, Transforms.reference(store, name), or a "
+                            "sequence of them")
+
+    def _named(self) -> tuple[Any, ...]:
+        return tuple(self.transform) if isinstance(self.transform, (list, tuple)) else (self.transform,)
+
+    def applies(self, candidate: Candidate) -> bool:
+        """Whether the clause weighs the candidate."""
+        return any(_same_object(named, candidate.transform) for named in self._named()) and all(
+            name in candidate.open or (name in candidate.arguments and _same(candidate.arguments[name], value))
+            for name, value in self.arguments.items())
+
+
+class Policy:
+    """Ranks candidates by its clauses: a candidate's score is the sum of the weights of the clauses that apply to it.
+    A policy only ranks: a recommendation where the caller takes a candidate, the decision where the caller lets it
+    step (`Session.step_over`, `Session.run`)."""
+
+    def __init__(self, *clauses: Clause):
+        self.clauses = clauses
+
+    def score(self, candidate: Candidate) -> float:
+        return sum(clause.weight for clause in self.clauses if clause.applies(candidate))
+
+    def answers(self, candidate: Candidate) -> dict[str, Any]:
+        """Values for the candidate's open parameters, each from the first clause that applies and gives it."""
+        values: dict[str, Any] = {}
+        for clause in self.clauses:
+            if clause.applies(candidate):
+                for name, value in clause.arguments.items():
+                    if name in candidate.open:
+                        values.setdefault(name, value)
+        return values
+
+
+def _frames(store: Any, pattern: Any, given: Mapping[str, Any] | None = None) -> list[Any]:
+    """The frames of a pattern in a store, as its executor gives them back; with `given`, those binding each symbol
+    given to the object its reference designates. A map gives a symbol no schema object: one given is read as the
+    symbol's schema (Gaps found, 7)."""
+    if given is None:
+        return list(store.transaction(lambda t: t.mutations([lambda mu: mu.map(lambda m: m.symbols([pattern]))])))
+    return list(store.transaction(lambda t: t.mutations([lambda mu: mu.map(lambda m: m.symbols([lambda p: p
+        .symbols(dict(given))])).then([lambda w: w.map(lambda n: n.symbols([pattern]))])])))
+
+
+def _copy(store: Any) -> Any:
+    """A copy of a store, made from its snapshot: schemas, patterns and data, each object at the same path."""
+    copy = Builders.Store()
+    Plain.FromPlain(copy).Snapshot(Plain.ToPlain(store).Snapshot())
+    return copy
+
+
+@dataclass
+class _Taken:
+    """What a session reads of a transform once, when it is made."""
+
+    t: _Transform
+    reference: Any
+    domains: dict[str, tuple[Any, ...] | None]
+    matched: str  # the role whose frame its prototype is matched in: the source's, else the sync's
+
+
+class Session:
+    """Applies transforms, one step per decision, to copies of a source, recording each step in a history certificate
+    (see the module's documentation): `Session(store, ["Label", "Copy"], "run", procedures, source=data,
+    target=out)`, `store` the certificates' store, where the transforms are defined; `history`, the name of the
+    history it keeps, which holds no step yet; `source`, the store whose data it rewrites, which it never disturbs;
+    `target`, the caller's store, usually empty, where the transforms that take a target build; `sync`, the copy of the
+    source it makes and edits in place, where they take a sync."""
+
+    def __init__(self, store: Any, transforms: Iterable[str], history: str, procedures: Procedures, *, source: Any,
+                 target: Any = None):
+        self.store, self.history, self.procedures, self.source, self.target = store, history, procedures, source, target
+        with store.transaction():
+            self._taken = [self._read(store, name) for name in transforms]
+            try:
+                held = len(store.singleton("Transforms.TheHistories").histories.at(history).history.steps)
+            except KeyError:
+                held = 0
+        if held:
+            raise ValueError(f"history {history!r} holds {held} steps already: a session keeps a history of its own, "
+                             "begun empty")
+        for taken in self._taken:
+            if "target" in taken.t.patterns and target is None:
+                raise ValueError(f"transform {taken.t.name!r} takes a target: the session is given none")
+        self.sync = _copy(source) if any("sync" in taken.t.patterns for taken in self._taken) else None
+        self.steps: list[Any] = []
+        self._seen: dict[str, int] = {}  # each object, by its path, numbered when the session first sees it
+
+    @staticmethod
+    def _read(store: Any, name: str) -> _Taken:
+        t = _transform(store, name)
+        if "source" not in t.patterns and "sync" not in t.patterns:
+            raise ValueError(f"transform {name!r} takes neither a source nor a sync: its prototype is matched in one")
+        return _Taken(t, References.of(store, t.visitor), _domains(store, t.prototype),
+                      "source" if "source" in t.patterns else "sync")
+
+    def _store(self, role: str) -> Any:
+        return {"source": self.source, "sync": self.sync, "target": self.target}[role]
+
+    # --- Candidates ---
+
+    def _history(self) -> set[tuple[str, str, str]]:
+        """Each pattern instance a transform took on this history: its name, the frame's role and its bindings."""
+        with self.store.transaction():
+            try:
+                history = self.store.singleton("Transforms.TheHistories").histories.at(self.history).history
+            except KeyError:
+                return set()
+            return {(str(named.name), str(entry.role), _binds(self.store, entry.frame))
+                    for step in history.steps for applied in step.step.transform
+                    for named in applied.transform.catalog for entry in step.step.frames}
+
+    def _number(self, plain: Any) -> int:
+        return self._seen.setdefault(json.dumps(plain, sort_keys=True), len(self._seen))
+
+    def _enabled(self) -> list[Candidate]:
+        taken = self._history()
+        found: list[Candidate] = []
+        for order, each in enumerate(self._taken):
+            t, store = each.t, self._store(each.matched)
+            pattern = _pattern_in(store, each.matched, t.prototype)
+            finite = [name for name, domain in each.domains.items() if domain is not None]
+            open_ = tuple(name for name, domain in each.domains.items() if domain is None)
+            for frame in _frames(store, pattern):
+                binds = _frame_plain(Bound(store, frame)).get("binds", {})
+                where = json.dumps(binds, sort_keys=True)
+                if (t.name, each.matched, where) in taken:
+                    continue
+                at = [self._number(binds[symbol]) for symbol in pattern.symbols]
+                for values in itertools.product(*(each.domains[name] or () for name in finite)):
+                    rank = [each.domains[name].index(value) for name, value in zip(finite, values)]  # type: ignore[union-attr]
+                    found.append(Candidate(each.reference, t.name, frame, dict(zip(finite, values)), open_,
+                                           order=(0 if each.domains else 1, order, *at, *rank), where=where))
+        return sorted(found, key=lambda candidate: candidate.order)
+
+    def candidates(self, policy: Policy | None = None) -> list[Candidate]:
+        """The candidates: each match of each transform's prototype, in the source (or, for a transform that takes no
+        source, in the sync), that no step of the history took, once per combination of its finite parameters'
+        values. Ranked by the policy's score, highest first, then in the canonical order."""
+        found = self._enabled()
+        if policy is None:
+            return found
+        scored = [replace(candidate, score=policy.score(candidate)) for candidate in found]
+        return sorted(scored, key=lambda candidate: -candidate.score)  # stable: in order among equal scores
+
+    @property
+    def done(self) -> bool:
+        """Whether no candidate is left."""
+        return not self._enabled()
+
+    # --- Steps ---
+
+    def _bind(self, each: _Taken, role: str, candidate: Candidate) -> Bound:
+        """A frame of the role, bound for a candidate: the match, in the role it is matched in; in the sync, the
+        frame of its pattern binding the match's objects, copied, to the symbols they share; in the target, the frame
+        of its pattern there. Each is its pattern's one frame so bound."""
+        store = self._store(role)
+        if role == each.matched:
+            return Bound(store, candidate.match)
+        pattern = _pattern_in(store, role, each.t.patterns[role])
+        shared = [] if role == "target" else [symbol for symbol in pattern.symbols if symbol in candidate.match]
+        copied = {symbol: self._copied(candidate.match[symbol]) for symbol in shared}
+        given = {symbol: value for symbol, value in copied.items() if hasattr(value, "as_schema")}
+        frames = [frame for frame in _frames(store, pattern, given)  # a schema object, as itself (Gaps found, 7)
+                  if all(frame[symbol] is value for symbol, value in copied.items() if symbol not in given)]
+        if len(frames) != 1:
+            agreeing = f" binding {shared} as the match does" if shared else ""
+            raise ValueError(f"transform {each.t.name!r}: the {role}'s store holds {len(frames)} frames of "
+                             f"{pattern.name!r}{agreeing}: a session binds the {role} frame to its one frame")
+        return Bound(store, frames[0])
+
+    def _copied(self, value: Any) -> Any:
+        """What a source's object, bound by a match, is in the sync, the source's copy: the object at the same path, or
+        a schema object, as itself, by its name."""
+        if not hasattr(value, "as_schema"):
+            return self.sync.registered(value.name)
+        plain = Plain.ToPlain(self.source)(value.as_schema(), value)
+        return Plain.FromPlain(self.sync)(self.sync.References.OfObject.as_schema(), plain)
+
+    def _apply(self, candidate: Candidate, by: str) -> Any:
+        if candidate.open:
+            raise ValueError(f"transform {candidate.name!r} has open parameters {list(candidate.open)}: answer them "
+                             "first")
+        offered = next((found for found in self._enabled() if found.name == candidate.name
+                        and found.where == candidate.where and all(
+                            name in candidate.arguments and _same(candidate.arguments[name], value)
+                            for name, value in found.arguments.items())), None)
+        if offered is None:
+            raise ValueError(f"transform {candidate.name!r} is not a candidate for that match and those arguments: "
+                             "not offered, or taken already")
+        each = next(each for each in self._taken if each.t.name == offered.name)
+        given = {role: self._bind(each, role, offered) for role in ROLES if role in each.t.patterns}
+        certificate = apply(self.store, each.t.name, candidate.arguments, self.history, self.procedures, by=by,
+                            **given)
+        self.steps.append(certificate)
+        return certificate
+
+    def take(self, candidate: Candidate) -> Any:
+        """Takes a candidate, as the caller decides: binds its frames, applies its transform, and records the step,
+        decided by the caller. Gives the transform certificate's reference."""
+        return self._apply(candidate, "caller")
+
+    def step_over(self, policy: Policy | None = None) -> bool:
+        """Takes one step as the policy decides, and says whether it took one: the candidate the policy ranks first,
+        its open parameters answered by the policy. It takes none where there is no policy or no candidate, the first
+        scores 0 or less (no clause weighs it: not the policy's to take), or the policy cannot answer its open
+        parameters; then the caller decides."""
+        if policy is None:
+            return False
+        ranked = self.candidates(policy)
+        if not ranked or ranked[0].score <= 0:
+            return False
+        candidate = ranked[0]
+        candidate = candidate.answer(**policy.answers(candidate))
+        if candidate.open:
+            return False
+        self._apply(candidate, "policy")
+        return True
+
+    def run(self, policy: Policy | None = None) -> int:
+        """Steps over until the session is done or the policy cannot decide; the number of steps taken."""
+        taken = 0
+        while self.step_over(policy):
+            taken += 1
+        return taken
