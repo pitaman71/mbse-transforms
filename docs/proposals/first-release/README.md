@@ -129,7 +129,10 @@ As the user decided, on the questions as posed:
 
 What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
-route taken meanwhile (the cases are suites XF's and SES').
+route taken meanwhile (the cases are suites XF's, SES' and RRN's). Stage 4 found none more: a map's spec matches a
+certificate's value properties, a `References.OfObject`, a `References.OfFrame` and the parameter assignments, by
+equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found within a
+transaction takes the first gap's route.
 
 1. **No reference resolved to a visitor within an open transaction.** A frame `store.transaction` gives back holds
    each symbol's object by its reference (CAP-315), and `Visitors.OfPattern` says a frame's members are the visitors of
