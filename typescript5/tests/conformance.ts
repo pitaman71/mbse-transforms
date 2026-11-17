@@ -68,7 +68,7 @@ function model(...names: string[]): any {
 /** Labels the sync's item with its name, in the case its parameter assignment gives. */
 function label(source: any, sync: any, target: any, assignments: Transforms.Assignments): void {
   const name = String(sync.i.name);
-  Proxies.store_of(sync.i).shelf.Item(sync.i, (i: any) => i.label(assignments.case === "upper" ? name.toUpperCase() : name.toLowerCase()));
+  (Proxies.store_of(sync.i) as any).shelf.Item(sync.i, (i: any) => i.label(assignments.case === "upper" ? name.toUpperCase() : name.toLowerCase()));
 }
 
 /** The certificates' store of the fixture's run. */
