@@ -1,6 +1,6 @@
 ---
 name: mbse-transforms
-description: Rewrite mbse-schemas models step by step, one decision at a time, every decision a parameter recorded in certificates, so that people and AI agents stay in the loop of code generation and other model rewrites. A transform is a prototype pattern, a native procedure called with the caller's source, sync and target visitors (each a Visitors.OfPattern) and the parameter assignments, and certificates of each application; candidates come from a filter fed by a frame stream, ranked by a policy; built in Python so far (mbse.Transforms.Transforms), reruns to follow. Use when planning or writing a generator or model rewrite on mbse-schemas data that must record its decisions, or when writing code that imports mbse.Transforms or @mbse/transforms.
+description: Rewrite mbse-schemas models step by step, one decision at a time, every decision a parameter recorded in certificates, so that people and AI agents stay in the loop of code generation and other model rewrites. A transform is a prototype pattern, a native procedure called with the caller's source, sync and target visitors (each a Visitors.OfPattern) and the parameter assignments, and certificates of each application; candidates come from a filter fed by a frame stream, ranked by a policy; reruns and diffs are queries over the certificates with mbse-schemas alone; built in Python so far (mbse.Transforms.Transforms). Use when planning or writing a generator or model rewrite on mbse-schemas data that must record its decisions, or when writing code that imports mbse.Transforms or @mbse/transforms.
 ---
 
 # mbse-transforms
@@ -10,8 +10,8 @@ parameter that a person, an agent or a policy decides, and each step recorded. "
 procedure, and a cerificate." Its procedure, native code for now, is called with up to three arguments, each a
 `Visitors.OfPattern` you make: a read-only `source`, a `sync` edited in place, and a `target` built anew. Certificates
 record each application under a history certificate. Transforms, their procedures, their application, the
-certificates, and candidates from a frame stream ranked by a policy are built, in Python so far; reruns are its first
-release's last stage
+certificates, and candidates from a frame stream ranked by a policy are built, in Python so far; reruns and diffs need
+no code of its own, being queries over the certificates
 ([the charter](mbse:mbse-transforms/docs/proposals/charter/README.md);
 [the first-release proposal](mbse:mbse-transforms/docs/proposals/first-release/README.md)). What it is to do is
 mbse-basis [FEA-021: every generation ambiguity a parameter](mbse:mbse-basis/docs/features/FEA-021.md), through its
@@ -29,8 +29,7 @@ language. It holds no programs, as mbse-basis
   not silently in code.
 - What each step read, wrote and decided must be kept, to audit it, compare two runs, or rerun with earlier decisions.
 
-Until its first release, nothing reuses an earlier history's decisions, and the TypeScript package has no
-transforms yet. For the data transforms rewrite, use the
+The TypeScript package has no transforms yet. For the data transforms rewrite, use the
 [mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md).
 
 ## Practices that prevent most mistakes
@@ -107,6 +106,28 @@ transforms yet. For the data transforms rewrite, use the
    - Python: [SES-02: A session consumes its stream: each frame is pulled once, as the caller iterates, and nothing is queried again; it ends when the stream does](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-02)
    - Python: [SES-03: A policy ranks each frame's candidates: a clause weighs the candidates of the transforms it names by object reference whose assignments hold its own; a score is the sum of the weights, ties in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-03)
    - Python: [SES-04: The caller takes a candidate by applying it with its own visitors: the candidate's frame as the argument the caller chooses, its open parameters answered, and who decided it recorded](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-04)
+
+6. **Rerun and diff by querying the certificates.** *Why*: certificates are mbse-schemas data, and a transform
+   certificate records its transform, its parameter assignments and each sub-certificate's frame ("ofc those
+   parameters must be recorded in the transform certificate"), so reusing an earlier history's decisions, or comparing
+   two histories, is a query, and code of its own would be bespoke code reading a model ("No model should need bespoke
+   schema-aware code to read or write. Use mbse-schemas built-in serialization support.").
+   [CAP-076: reruns reuse decisions](mbse:mbse-basis/docs/capabilities/CAP-076.md). *When*: rerunning over a store
+   that changed, or comparing two runs. *How*: mbse-transforms has no call for either. Make the transform's reference
+   and the frame's bindings (`References.of(store, x)`) values of the certificates' store (`Plain`, written and read
+   back), and map over the certificates' store: the history by its name (`Transforms.TheHistories`' `histories`), its
+   `steps`' transform certificate whose `transform` equals the transform's reference, and its `frames`'
+   sub-certificate whose `frame` equals the frame; a spec matches a value property by equality of the whole value, so
+   give a frame's bindings only, never a witness. A frame binds by object reference, so a store remade with the same
+   owners and keys is queried by its own frames. To rerun, read the parameter assignments the certificate found
+   recorded, within a transaction, and apply and certify with them, giving `by` as, say, "reused"; where the query
+   finds none, decide as for a new frame. To diff, list each history's certificates by the same map, look each up in
+   the other history by the same query (none: removed, the orphans, or added), and compare each pair with
+   `Comparison.OfObject`: a pair not equal recorded other parameter assignments.
+   - Python: [RRN-01: A rerun reuses: for each frame of a fresh session, a query over the certificates' store finds the transform certificate, in the earlier history, of the same transform on the same frame, and the caller applies and certifies with the parameter assignments it recorded, decided "reused"](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-01)
+   - Python: [RRN-02: A diff: two histories over stores that differ, by the same query and mbse-schemas' `Comparison` alone: added, removed (the orphans), and changed (other parameter assignments recorded)](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-02)
+   - Python: [RRN-03: What a query can match: a sub-certificate by its recorded frame, a `References.OfFrame` value, by equality in a pattern spec, as a transform certificate by its transform, a `References.OfObject` value, by its parameter assignments, and by its sub-certificate's argument; equality is of the whole value](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-03)
+   - Python: [RRN-04: Determinism: the same frames and the same choices give byte-identical certificates, as plain data, in two stores](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-04)
 
 ## Learn it by example
 <!-- no case: points to the tutorials and the test plan as a whole -->

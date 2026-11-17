@@ -75,10 +75,27 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    `session.ranked(policy)`, ranks them by a policy (the precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
    queried again, and termination is relative to the stream. The caller takes a candidate by applying it with its own
    visitors.
-5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): an earlier
-   history certificate's transform certificates' parameters reused where the same transform applies to the same
+5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)), queries over
+   the certificates (stage 4, below): the parameter assignments that an earlier history's transform certificates recorded
+   reused where the same transform applies to the same
    frame, the earlier ones that no longer apply reported (orphans), and two histories compared (added, removed,
    changed).
+
+## Stage 4: reruns and diffs, queries over the certificates
+
+[CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md) needs
+no code of mbse-transforms'. A transform certificate already records its transform, its parameter assignments and its
+sub-certificates' frames ("ofc those parameters must be recorded in the transform certificate"), and certificates are
+mbse-schemas data. So a rerun's reuse is a query: the transform certificate, in an earlier history, of the same
+transform on the same frame, and the parameter assignments it recorded. A diff is the same query over two histories,
+their transform certificates compared by mbse-schemas' `Comparison`: added, removed (the orphans), and changed (other
+parameter assignments recorded). Calls of mbse-transforms' own for either would be bespoke code reading a model, which
+"No model should need bespoke schema-aware code to read or write. Use mbse-schemas built-in serialization support."
+rules out. Only a transform is parametric; a history, a certificate, a transaction, a change and a journal record values
+and declare no parameter.
+
+Stage 4 is the cases that show it, with mbse-schemas' queries and `Comparison` alone; where a query cannot match what a
+certificate recorded, that is a gap of mbse-schemas', reported (PRI-032).
 
 ## Not in it
 
@@ -96,6 +113,12 @@ schemas' store, its `target` the module's, so it combines no stores, which mbse-
 predicates move to mbse-schemas' `OfPattern` where they are structural, and into procedures' verifications where they
 need expressions until CAP-142 (mbse-patterns' charter, Decided, 3).
 
+
+Transforms to and from program trees match whole files: a pattern's symbols bind reference objects, and mbse-programs'
+statements, clauses and class members are values within a file. As the user decided, "the granularity at which we can
+write transforms to/from AST is at the file level. This is acceptable temporarily and might streamline implementation a
+bit. We can open a future capability that allows transforms to target value objects"
+([CAP-317: transforms targeting value objects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-317)).
 ## Decided
 
 As the user decided, on the questions as posed:
@@ -112,21 +135,25 @@ As the user decided, on the questions as posed:
 
 What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
-route taken meanwhile (the cases are suites XF's and SES').
+route taken meanwhile (the cases are suites XF's, SES' and RRN's). Stage 4 found none more: a map's spec matches a
+certificate's value properties, a `References.OfObject`, a `References.OfFrame` and the parameter assignments, by
+equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found takes the first gap's route.
 
-1. **No reference resolved to a visitor within an open transaction.** A frame `store.transaction` gives back holds
-   each symbol's object by its reference (CAP-315), and `Visitors.OfPattern` says a frame's members are the visitors of
-   the objects it binds, but nothing public gives the visitor of what a `References.OfObject` designates within a
-   transaction already open: `References._designated` does, privately, and a map whose symbol is given the reference
-   runs in a transaction of its own, which cannot be opened within one already open (transactions do not nest). So a
-   caller cannot make, from a frame it obtained, the `Visitors.OfPattern` an application takes. *Route:* the tests,
-   playing the caller, find each object within their transaction, from the singleton the reference's path starts at,
-   through each ownership entry by its keys (`python3/tests/support.py`). *Asked of mbse-schemas:* a public resolution
-   within a transaction, such as `store.designated(reference)`.
+1. **A query's frame stream cannot be consumed within the transaction that makes it.** A query's result is a frame
+   stream, and `Visitors.OfPattern` is a frame's own protocol, "its symbols are members, each a `Visitors.OfObject` of
+   the object it binds ... Frames are made by the executor of mutation expressions". But `store.transaction` gives the
+   stream back after its transaction ends, when no visitor may live (CAP-315), so each frame holds object references and
+   the property values named, never the frame as a `Visitors.OfPattern`: what a caller applies a transform with, and
+   what reading a certificate a query found takes, is not given it. *Route:* the tests, playing the caller, find each
+   object within a transaction of their own from the singleton its object reference starts at, through each ownership
+   entry by its keys (`python3/tests/support.py`), which reads what CAP-132 makes internal to an object reference.
+   *Asked of mbse-schemas:* a frame stream consumed within its transaction, each frame given as a `Visitors.OfPattern`;
+   nothing then resolves a reference.
 2. **A keyed adjacency given a mapping inserts a second entry under a key held.** In an imperative update,
    `store.shelf.Shelf(shelf, lambda s: s.items({"nut": lambda e: e.item(lambda i: i.name("nut"))}))` run twice leaves
    two entries keyed `"nut"` in a relation whose `unique` clause is `["shelf", "key"]`, and the commit does not refuse
-   them. *Route:* none needed here; the cases' procedures write each key once.
+   them. *Route:* none needed here; the cases' procedures write each key once. A fix is proposed in mbse-schemas
+   ([PR #53](https://github.com/pitaman71/mbse-schemas/pull/53)).
 3. **A snapshot of a schema that declares parameters is not read back the same.** In a store with `Parametrics`
    installed, a pattern declaring a parameter (`.parameters([txn.Parametrics.OfParameters(...)])`), written by
    `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
