@@ -59,7 +59,7 @@ Each part is *(agent, for review)* where the decisions above leave it open.
 4. **The session**, the caller of applications, which the procedure does not see: it finds the prototype's matches in
    the source (candidates), binds the frames, makes or reuses the copies, applies one transform per step, and keeps the
    history certificate. Policies rank candidates and answer parameters (the precursor's `Policy` and `Clause`), every
-   decision recorded with who made it (caller, policy, reused). How it makes copies is its own: a stacked store over the
+   decision's provenance (caller, policy, reused) recorded by the history certificate (Decided, 2). How it makes copies is its own: a stacked store over the
    source ([CAP-308](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-308)) keeps the
    source undisturbed with the edits above it, or a snapshot.
 5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)): an earlier
@@ -83,16 +83,17 @@ schemas' store, its `target` the module's, so it combines no stores, which mbse-
 predicates move to mbse-schemas' `OfPattern` where they are structural, and into procedures' verifications where they
 need expressions until CAP-142 (mbse-patterns' charter, Decided, 3).
 
-## Questions for the user
+## Decided
 
-1. **Languages.** The charter has each stage pass in both languages. As for mbse-programs' port, Python first, and
-   TypeScript a later stage? *Recommended: Python first.*
-2. **Who decided.** A transform certificate records the parameters; does it also record who decided them (caller,
-   policy, or reused from an earlier history), as the precursor's steps did? *Recommended: yes; reruns and diffs use
-   it.*
-3. **CAP-074, CAP-075 and CAP-076.** Their text describes the precursor's before, after, rewrite and trace. Rewritten
-   to this model in mbse-basis, as part of this work? *Recommended: yes, with the charter's Decided 2 marked superseded by
-   the procedure.*
+As the user decided, on the questions as posed:
+
+1. **Python first** ("yes"): each stage passes in Python, TypeScript following as a stage of its own, as for
+   mbse-programs' port.
+2. **Provenance on the history certificate**: "the history certificate can capture provenance". Who decided a step's
+   parameters (the caller, a policy, or an earlier history reused) is recorded by the history certificate, not the
+   transform certificate *(agent: as mbse-schemas' Provenance records a transaction's, keyed by the step)*.
+3. **CAP-074, CAP-075 and CAP-076 rewritten to this model** in mbse-basis ("yes"), the charter's Decided 2, a rewrite
+   as a mutation expression, superseded by the procedure.
 
 ---
 
