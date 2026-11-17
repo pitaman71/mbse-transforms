@@ -1,5 +1,5 @@
 <!-- nav -->
-[← TypeScript tutorial](../typescript5/tutorials/README.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 3 · Running again: reruns and diffs, queries over the certificates (TypeScript)](../typescript5/tutorials/03_Running_Again.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
 
 # Equivalence
 
@@ -69,4 +69,4 @@ language alone is listed here, in a table of its cases (each in backticks), its 
 ---
 
 <!-- nav -->
-[← TypeScript tutorial](../typescript5/tutorials/README.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 3 · Running again: reruns and diffs, queries over the certificates (TypeScript)](../typescript5/tutorials/03_Running_Again.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

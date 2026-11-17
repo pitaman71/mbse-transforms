@@ -28,9 +28,12 @@ language. It holds no programs, as mbse-basis
 - A generator or another rewrite of mbse-schemas data must make its choices visible, as parameters someone decides,
   not silently in code.
 - What each step read, wrote and decided must be kept, to audit it, compare two runs, or rerun with earlier decisions.
+- Not yet for a step within a value: a prototype's symbols bind reference objects, so transforms over program trees
+  match whole files for now, as the user decided ("the granularity at which we can write transforms to/from AST is at
+  the file level"); transforms targeting value objects are mbse-basis' CAP-317, proposed.
 
 For the data transforms rewrite, use the
-[mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md).
+[mbse-schemas skill](mbse:mbse-schemas/skills/mbse-schemas/SKILL.md).
 
 ## Practices that prevent most mistakes
 
@@ -49,6 +52,7 @@ For the data transforms rewrite, use the
    parameters through `Parametrics`. `Transforms.define(txn, name, procedure, prototype)` writes the transform, owned
    by the catalog (`Transforms.TheCatalog`) under its name, with the name its procedure is registered under.
    [CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md).
+   - Python: [T01.1: A transform is data: its prototype and the name of its procedure](mbse:mbse-transforms/python3/tutorials/01_Labelling_A_Shelf.ipynb#T01.1) · TypeScript: [T01.1: A transform is data: its prototype and the name of its procedure](mbse:mbse-transforms/typescript5/tutorials/01_Labelling_A_Shelf.ipynb#T01.1)
    - Python: [XF-01: A transform's anatomy: its name, prototype, parameters and the name its procedure is registered under, defined as data](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-01) · TypeScript: [XF-01: A transform's anatomy: its name, prototype, parameters and the name its procedure is registered under, defined as data](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-01)
 3. **Write a procedure that decides nothing.** *Why*: every choice must be a parameter someone decides and the
    certificate records: "Transforms may not make decisions below the parameter level. Discrete decisions in a
@@ -60,6 +64,7 @@ For the data transforms rewrite, use the
    stores' builders (`Proxies.store_of(member).<schema>(member, ...)`). "The transforms application procedure does not
    need to know how copies are made since it takes Visitors.OfPattern as an argument." Take every choice from
    `assignments`, which are read-only.
+   - Python: [T01.2: A procedure decides nothing](mbse:mbse-transforms/python3/tutorials/01_Labelling_A_Shelf.ipynb#T01.2) · TypeScript: [T01.2: A procedure decides nothing](mbse:mbse-transforms/typescript5/tutorials/01_Labelling_A_Shelf.ipynb#T01.2)
    - Python: [XF-02: Procedures are registered by name, each once; an unknown name is refused before anything runs](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-02) · TypeScript: [XF-02: Procedures are registered by name, each once; an unknown name is refused before anything runs](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-02)
    - Python: [XF-03: A procedure is called with the caller's visitors and the parameter assignments, and that's that: each argument absent is None](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-03) · TypeScript: [XF-03: A procedure is called with the caller's visitors and the parameter assignments, and that's that: each argument absent is null](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-03)
 4. **Apply a transform with your own visitors, and read its certificates.** *Why*: each application is one step,
@@ -82,6 +87,9 @@ For the data transforms rewrite, use the
    prototype, and `prev` and `next`; a sub-certificate per argument given the pattern instance its visitor bore, a
    `References.OfFrame`, its pattern, and the step before it on that instance.
    [CAP-075: steps linked to what they matched and wrote](mbse:mbse-basis/docs/capabilities/CAP-075.md).
+   - Python: [T01.3: Apply, then certify, with your own visitors](mbse:mbse-transforms/python3/tutorials/01_Labelling_A_Shelf.ipynb#T01.3) · TypeScript: [T01.3: Apply, then certify, with your own visitors](mbse:mbse-transforms/typescript5/tutorials/01_Labelling_A_Shelf.ipynb#T01.3)
+   - Python: [T01.4: The certificates, read back](mbse:mbse-transforms/python3/tutorials/01_Labelling_A_Shelf.ipynb#T01.4) · TypeScript: [T01.4: The certificates, read back](mbse:mbse-transforms/typescript5/tutorials/01_Labelling_A_Shelf.ipynb#T01.4)
+   - Python: [T02.3: Taking a candidate: apply it with your own visitors, verify, certify](mbse:mbse-transforms/python3/tutorials/02_Choosing_What_To_Apply.ipynb#T02.3) · TypeScript: [T02.3: Taking a candidate: apply it with your own visitors, verify, certify](mbse:mbse-transforms/typescript5/tutorials/02_Choosing_What_To_Apply.ipynb#T02.3)
    - Python: [XF-04: The arguments are the caller's: the source read, the sync edited in place and the target built, each a visitor bearing its own pattern frame, in the caller's transactions, which commit or roll back what the procedure wrote](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-04) · TypeScript: [XF-04: The arguments are the caller's: the source read, the sync edited in place and the target built, each a visitor bearing its own pattern frame, in the caller's transactions, which commit or roll back what the procedure wrote](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-04)
    - Python: [XF-05: Parameters: the transform certificate records the parameter assignments, and the history certificate who decided them, as the caller says](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-05) · TypeScript: [XF-05: Parameters: the transform certificate records the parameter assignments, and the history certificate who decided them, as the caller says](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-05)
    - Python: [XF-06: Certificates are written and linked: the history's sequence, prev and next, the transform and its prototype, a sub-certificate for each argument present holding the pattern instance its visitor bore, and the chain of each pattern instance; all of it data, written and read back as any](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-06) · TypeScript: [XF-06: Certificates are written and linked: the history's sequence, prev and next, the transform and its prototype, a sub-certificate for each argument present holding the pattern instance its visitor bore, and the chain of each pattern instance; all of it data, written and read back as any](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-06)
@@ -103,6 +111,9 @@ For the data transforms rewrite, use the
    the clauses that apply. Take a candidate by applying it with your own visitors (its `frame` among them, as the
    argument you choose), and certifying it, giving `by`, who decided it.
    [CAP-074: transforms applied step by step](mbse:mbse-basis/docs/capabilities/CAP-074.md).
+   - Python: [T02.1: A session: candidates from a frame stream](mbse:mbse-transforms/python3/tutorials/02_Choosing_What_To_Apply.ipynb#T02.1) · TypeScript: [T02.1: A session: candidates from a frame stream](mbse:mbse-transforms/typescript5/tutorials/02_Choosing_What_To_Apply.ipynb#T02.1)
+   - Python: [T02.2: A policy ranks each frame's candidates](mbse:mbse-transforms/python3/tutorials/02_Choosing_What_To_Apply.ipynb#T02.2) · TypeScript: [T02.2: A policy ranks each frame's candidates](mbse:mbse-transforms/typescript5/tutorials/02_Choosing_What_To_Apply.ipynb#T02.2)
+   - Python: [T02.3: Taking a candidate: apply it with your own visitors, verify, certify](mbse:mbse-transforms/python3/tutorials/02_Choosing_What_To_Apply.ipynb#T02.3) · TypeScript: [T02.3: Taking a candidate: apply it with your own visitors, verify, certify](mbse:mbse-transforms/typescript5/tutorials/02_Choosing_What_To_Apply.ipynb#T02.3)
    - Python: [SES-01: The filter is each transform's prototype: a frame passes where it is a frame of the prototype, and becomes candidates, one per combination of its finite parameters' values (a bool's; a union of options' names), any other parameter left open, in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-01) · TypeScript: [SES-01: The filter is each transform's prototype: a frame passes where it is a frame of the prototype, and becomes candidates, one per combination of its finite parameters' values (a bool's; a union of options' names), any other parameter left open, in the canonical order](mbse:mbse-transforms/typescript5/tests/04_Session.ipynb#SES-01)
    - Python: [SES-02: A session consumes its stream: each frame is pulled once, as the caller iterates, and nothing is queried again; it ends when the stream does](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-02) · TypeScript: [SES-02: A session consumes its stream: each frame is pulled once, as the caller iterates, and nothing is queried again; it ends when the stream does](mbse:mbse-transforms/typescript5/tests/04_Session.ipynb#SES-02)
    - Python: [SES-03: A policy ranks each frame's candidates: a clause weighs the candidates of the transforms it names by object reference whose assignments hold its own; a score is the sum of the weights, ties in the canonical order](mbse:mbse-transforms/python3/tests/04_Session.ipynb#SES-03) · TypeScript: [SES-03: A policy ranks each frame's candidates: a clause weighs the candidates of the transforms it names by object reference whose assignments hold its own; a score is the sum of the weights, ties in the canonical order](mbse:mbse-transforms/typescript5/tests/04_Session.ipynb#SES-03)
@@ -125,6 +136,9 @@ For the data transforms rewrite, use the
    finds none, decide as for a new frame. To diff, list each history's certificates by the same map, look each up in
    the other history by the same query (none: removed, the orphans, or added), and compare each pair with
    `Comparison.OfObject`: a pair not equal recorded other parameter assignments.
+   - Python: [T03.1: A first run, recorded](mbse:mbse-transforms/python3/tutorials/03_Running_Again.ipynb#T03.1) · TypeScript: [T03.1: A first run, recorded](mbse:mbse-transforms/typescript5/tutorials/03_Running_Again.ipynb#T03.1)
+   - Python: [T03.2: A rerun reuses what the certificates recorded](mbse:mbse-transforms/python3/tutorials/03_Running_Again.ipynb#T03.2) · TypeScript: [T03.2: A rerun reuses what the certificates recorded](mbse:mbse-transforms/typescript5/tutorials/03_Running_Again.ipynb#T03.2)
+   - Python: [T03.3: A diff: two histories compared](mbse:mbse-transforms/python3/tutorials/03_Running_Again.ipynb#T03.3) · TypeScript: [T03.3: A diff: two histories compared](mbse:mbse-transforms/typescript5/tutorials/03_Running_Again.ipynb#T03.3)
    - Python: [RRN-01: A rerun reuses: for each frame of a fresh session, a query over the certificates' store finds the transform certificate, in the earlier history, of the same transform on the same frame, and the caller applies and certifies with the parameter assignments it recorded, decided "reused"](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-01) · TypeScript: [RRN-01: A rerun reuses: for each frame of a fresh session, a query over the certificates' store finds the transform certificate, in the earlier history, of the same transform on the same frame, and the caller applies and certifies with the parameter assignments it recorded, decided "reused"](mbse:mbse-transforms/typescript5/tests/05_Reruns.ipynb#RRN-01)
    - Python: [RRN-02: A diff: two histories over stores that differ, by the same query and mbse-schemas' `Comparison` alone: added, removed (the orphans), and changed (other parameter assignments recorded)](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-02) · TypeScript: [RRN-02: A diff: two histories over stores that differ, by the same query and mbse-schemas' `Comparison` alone: added, removed (the orphans), and changed (other parameter assignments recorded)](mbse:mbse-transforms/typescript5/tests/05_Reruns.ipynb#RRN-02)
    - Python: [RRN-03: What a query can match: a sub-certificate by its recorded frame, a `References.OfFrame` value, by equality in a pattern spec, as a transform certificate by its transform, a `References.OfObject` value, by its parameter assignments, and by its sub-certificate's argument; equality is of the whole value](mbse:mbse-transforms/python3/tests/05_Reruns.ipynb#RRN-03) · TypeScript: [RRN-03: What a query can match: a sub-certificate by its recorded frame, a `References.OfFrame` value, by equality in a pattern spec, as a transform certificate by its transform, a `References.OfObject` value, by its parameter assignments, and by its sub-certificate's argument; equality is of the whole value](mbse:mbse-transforms/typescript5/tests/05_Reruns.ipynb#RRN-03)
@@ -140,6 +154,7 @@ cases that assert it.
   { source, sync, target })` and `Transforms.certify(store, transform, assignments, history, by, { sync })`; the
   procedure receives each absent one as `null`. A transaction's scope is a callback, `store.transaction(() => ...)`,
   one nested in another to hold several stores' open, as mbse-schemas has it.
+  - Python: [T01.3: Apply, then certify, with your own visitors](mbse:mbse-transforms/python3/tutorials/01_Labelling_A_Shelf.ipynb#T01.3) · TypeScript: [T01.3: Apply, then certify, with your own visitors](mbse:mbse-transforms/typescript5/tutorials/01_Labelling_A_Shelf.ipynb#T01.3)
   - Python: [XF-04: The arguments are the caller's: the source read, the sync edited in place and the target built, each a visitor bearing its own pattern frame, in the caller's transactions, which commit or roll back what the procedure wrote](mbse:mbse-transforms/python3/tests/03_Transforms.ipynb#XF-04) · TypeScript: [XF-04: The arguments are the caller's: the source read, the sync edited in place and the target built, each a visitor bearing its own pattern frame, in the caller's transactions, which commit or roll back what the procedure wrote](mbse:mbse-transforms/typescript5/tests/03_Transforms.ipynb#XF-04)
 - **A registry is asked by `has` and `get`**: `procedures.has(name)` and `procedures.get(name)`, for Python's `name in
   procedures` and `procedures[name]`; `register(name, procedure)` is the same.
@@ -160,5 +175,6 @@ cases that assert it.
 <!-- no case: points to the tutorials and the test plan as a whole -->
 
 The [Python tutorial](mbse:mbse-transforms/python3/tutorials/README.md) and the
-[TypeScript tutorial](mbse:mbse-transforms/typescript5/tutorials/README.md) teach by case studies, and the
-[test plan](mbse:mbse-transforms/python3/tests/TestPlan.md) lists every test case.
+[TypeScript tutorial](mbse:mbse-transforms/typescript5/tutorials/README.md) teach by three case studies over one
+shelf: a transform applied and certified, candidates from a frame stream ranked by a policy, and reruns and diffs as
+queries over the certificates. The [test plan](mbse:mbse-transforms/python3/tests/TestPlan.md) lists every test case.
