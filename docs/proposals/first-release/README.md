@@ -42,7 +42,7 @@ charter's before, after and rewrite. Nothing is built until it is reviewed.
   decisions in a transformation procedure must themselves be modeled as discrete transforms with non-overlapping
   patterns." *(agent)* A procedure's deterministic branches on data, which choose nothing, are computation, not decisions ([PRI-014: every ambiguity a decision](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-014)).
 - **No bespoke schema-aware code.** "No model should need bespoke schema-aware code to read or write. Use mbse-schemas
-  built-in serialization support." ([CAP-282](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-282)).
+  built-in serialization support." ([CAP-282: no model needs bespoke schema-aware code to read or write](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-282)).
   Certificates, transforms' prototypes and parameters are schema data, installed; a procedure reads and writes its
   frames through mbse-schemas' visitors.
 
@@ -54,7 +54,7 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
 1. **Models**, installed by `install(txn)`: `Transforms.Transform`, owned by a catalog under its name: its prototype,
    an `OfPattern`, which declares its parameters through mbse-schemas' Parametrics, and the name its procedure is
    registered under; the three certificates, the history certificate a singleton's, every certificate owned under it,
-   so each has an object reference ([CAP-315](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-315.md)).
+   so each has an object reference ([CAP-315: every read within a transaction or through a follow](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-315.md)).
    A transform certificate holds its parameter assignments, and references to its transform and its prototype; a
    sub-certificate holds the pattern instance its argument's visitor bore, as a `References.OfFrame`, and the pattern
    it is a frame of, read from the visitor (`as_schema()`).
@@ -75,7 +75,7 @@ Each part is *(agent, for review)* where the decisions above leave it open; the 
    `session.ranked(policy)`, ranks them by a policy (the precursor's `Policy` and `Clause`, naming transforms by object reference). Each frame is consumed once; nothing is
    queried again, and termination is relative to the stream. The caller takes a candidate by applying it with its own
    visitors.
-5. **Reruns** ([CAP-076](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)), queries over
+5. **Reruns** ([CAP-076: reruns reuse decisions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-076.md)), queries over
    the certificates (stage 4, below): the parameter assignments that an earlier history's transform certificates recorded
    reused where the same transform applies to the same
    frame, the earlier ones that no longer apply reported (orphans), and two histories compared (added, removed,
@@ -99,11 +99,11 @@ certificate recorded, that is a gap of mbse-schemas', reported (PRI-032).
 
 ## Not in it
 
-Composite transforms, undo ([CAP-079](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-079.md)),
-inversion ([CAP-080](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-080.md)), guards and
-distributions ([CAP-083](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-083.md)): mbse-codegen-python
+Composite transforms, undo ([CAP-079: steps undone](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-079.md)),
+inversion ([CAP-080: invertible transforms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-080.md)), guards and
+distributions ([CAP-083: policies with guards and distributions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-083.md)): mbse-codegen-python
 uses none of them. Procedures as data waits on mbse-schemas evaluating expressions
-([CAP-142](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md)).
+([CAP-142: expressions evaluated in queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md)).
 
 ## What mbse-codegen-python then needs of it
 

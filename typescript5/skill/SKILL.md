@@ -30,7 +30,7 @@ language. It holds no programs, as mbse-basis
 - What each step read, wrote and decided must be kept, to audit it, compare two runs, or rerun with earlier decisions.
 
 For the data transforms rewrite, use the
-[mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md).
+[mbse-schemas skill](mbse:mbse-schemas/skills/mbse-schemas/SKILL.md).
 
 ## Practices that prevent most mistakes
 
