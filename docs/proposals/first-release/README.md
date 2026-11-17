@@ -131,18 +131,18 @@ What building it found missing in mbse-schemas 0.28.0, each reported, not worked
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
 route taken meanwhile (the cases are suites XF's, SES' and RRN's). Stage 4 found none more: a map's spec matches a
 certificate's value properties, a `References.OfObject`, a `References.OfFrame` and the parameter assignments, by
-equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found within a
-transaction takes the first gap's route.
+equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found takes the first gap's route.
 
-1. **No reference resolved to a visitor within an open transaction.** A frame `store.transaction` gives back holds
-   each symbol's object by its reference (CAP-315), and `Visitors.OfPattern` says a frame's members are the visitors of
-   the objects it binds, but nothing public gives the visitor of what a `References.OfObject` designates within a
-   transaction already open: `References._designated` does, privately, and a map whose symbol is given the reference
-   runs in a transaction of its own, which cannot be opened within one already open (transactions do not nest). So a
-   caller cannot make, from a frame it obtained, the `Visitors.OfPattern` an application takes. *Route:* the tests,
-   playing the caller, find each object within their transaction, from the singleton the reference's path starts at,
-   through each ownership entry by its keys (`python3/tests/support.py`). *Asked of mbse-schemas:* a public resolution
-   within a transaction, such as `store.designated(reference)`.
+1. **A query's frame stream cannot be consumed within the transaction that makes it.** A query's result is a frame
+   stream, and `Visitors.OfPattern` is a frame's own protocol, "its symbols are members, each a `Visitors.OfObject` of
+   the object it binds ... Frames are made by the executor of mutation expressions". But `store.transaction` gives the
+   stream back after its transaction ends, when no visitor may live (CAP-315), so each frame holds object references and
+   the property values named, never the frame as a `Visitors.OfPattern`: what a caller applies a transform with, and
+   what reading a certificate a query found takes, is not given it. *Route:* the tests, playing the caller, find each
+   object within a transaction of their own from the singleton its object reference starts at, through each ownership
+   entry by its keys (`python3/tests/support.py`), which reads what CAP-132 makes internal to an object reference.
+   *Asked of mbse-schemas:* a frame stream consumed within its transaction, each frame given as a `Visitors.OfPattern`;
+   nothing then resolves a reference.
 2. **A keyed adjacency given a mapping inserts a second entry under a key held.** In an imperative update,
    `store.shelf.Shelf(shelf, lambda s: s.items({"nut": lambda e: e.item(lambda i: i.name("nut"))}))` run twice leaves
    two entries keyed `"nut"` in a relation whose `unique` clause is `["shelf", "key"]`, and the commit does not refuse
