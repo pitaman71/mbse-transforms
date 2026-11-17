@@ -10,22 +10,20 @@ a parameter that a person, an agent or a policy decides, and keeps an audit hist
 step read and wrote. It is for those who build code generators and other model rewrites on
 [mbse-schemas](https://github.com/pitaman71/mbse-schemas) data, mbse-codegen-python first.
 
-A transform has a prototype, a pattern whose matches are where it applies; a procedure, native code for now, that
-reads and writes up to three frames of mbse-schemas' `Visitors.OfPattern` (a read-only source, a sync edited in place,
-and a target built anew); and certificates that record each application, under a history certificate for the whole
-sequence. Its packages are `mbse.Transforms` in Python and `@mbse/transforms` in TypeScript, one library in two
-languages, built Python first.
+"A transform has a prototype, a procedure, and a cerificate." The prototype is a pattern; the procedure, native code
+for now, is called with up to three arguments, each a `Visitors.OfPattern` the caller makes (a read-only `source`, a
+`sync` edited in place, and a `target` built anew), and the parameter assignments; certificates record each
+application, under a history certificate for the whole sequence. Its packages are `mbse.Transforms` in Python and
+`@mbse/transforms` in TypeScript, one library in two languages, built Python first.
 
 Built so far, in Python: the repository's conventions (both packages, the skill, the notebook test suites and the
-tutorials' frame), and the first release's second stage, `mbse.Transforms.Transforms`: a transform's model, installed
-as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
-(`Transforms.Procedures`); the application of a transform to up to three frames already bound (`Transforms.apply`),
-verified by falsification or by a metric where asked; and the history, transform and frame certificates it writes and
-links, in a store of their own; and its third stage, the session (`Transforms.Session`), whose candidates are a
-filter fed by a frame stream it consumes (by default, each transform's prototype mapped over the source), which binds
-each application's arguments, makes the copy the transforms edit while the source stays undisturbed, and takes each
-step by the caller's decision or a policy's (`Transforms.Policy`, `Transforms.Clause`), the history certificate
-recording which. Reruns follow. Why it exists and what it
+tutorials' frame), and the first release's second and third stages, `mbse.Transforms.Transforms`: a transform's model,
+installed as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
+(`Transforms.Procedures`); the application of a transform with the caller's visitors (`Transforms.apply`), which calls
+the procedure, then, only where the caller asks, the caller's verification, and writes the history, transform and
+sub-certificates in the one transaction it opens, in the certificates' store the caller names; and candidates from a
+filter fed by a frame stream the caller supplies (`Transforms.Session`), ranked by a policy (`Transforms.Policy`,
+`Transforms.Clause`), which the caller takes by applying them with its own visitors. Reruns follow. Why it exists and what it
 is to be are in [its charter](docs/proposals/charter/README.md), and its first release in
 [the first-release proposal](docs/proposals/first-release/README.md), with the gaps in mbse-schemas that building it
 found. The TypeScript package follows the Python one as a later stage.

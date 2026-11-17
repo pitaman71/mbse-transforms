@@ -1,11 +1,12 @@
 # Guide for AI agents
 
 mbse-transforms builds transforms over [mbse-schemas](https://github.com/pitaman71/mbse-schemas) data: rewrites of
-models applied one decision at a time, each a prototype (a pattern), a procedure (native code for now) over up to three
-frames (source, sync and target, each a `Visitors.OfPattern`) and certificates that record every application. Its
-first release ([the proposal](docs/proposals/first-release/README.md)) is built in stages: transforms, procedures,
-their application and the certificates (suite XF), and the session, its candidates, copies and policies (suite SES),
-are built in Python (`mbse.Transforms.Transforms`); reruns follow. It is built Python first;
+models applied one decision at a time, each a prototype (a pattern), a procedure (native code for now) called with up
+to three arguments the caller makes (source, sync and target, each a `Visitors.OfPattern`) and the parameter
+assignments, and certificates that record every application. Its first release
+([the proposal](docs/proposals/first-release/README.md)) is built in stages: transforms, procedures, their application
+and the certificates (suite XF), and candidates from a frame stream, ranked by a policy (suite SES), are built in
+Python (`mbse.Transforms.Transforms`); reruns follow. It is built Python first;
 TypeScript follows as a later stage. Two equivalent implementations exist: `python3/` (`mbse.Transforms`) and `typescript5/` (`@mbse/transforms`).
 
 ## Start here
