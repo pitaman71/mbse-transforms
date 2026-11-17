@@ -130,6 +130,9 @@ As the user decided, on the questions as posed:
    certificate *(agent: as mbse-schemas' Provenance records a transaction's, keyed by the step)*.
 3. **CAP-074, CAP-075 and CAP-076 rewritten to this model** in mbse-basis ("yes"), the charter's Decided 2, a rewrite
    as a mutation expression, superseded by the procedure.
+4. **0.1.0 waits for TypeScript**: "mbse-transforms 0.1.0 waits for typescript5". The release is tagged when both
+   packages pass every suite, the same cases in both languages, as PRI-031 makes the version their contract; Python
+   first remains the order of the work, not of the release.
 
 ## Gaps found
 
