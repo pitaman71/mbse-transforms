@@ -95,6 +95,46 @@ As the user decided, on the questions as posed:
 3. **CAP-074, CAP-075 and CAP-076 rewritten to this model** in mbse-basis ("yes"), the charter's Decided 2, a rewrite
    as a mutation expression, superseded by the procedure.
 
+## Gaps found
+
+What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
+([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
+public route stage 2 takes meanwhile (`python3/mbse/Transforms/Transforms.py`; the cases are suite XF's).
+
+1. **No reference resolved to a visitor within an open transaction.** A frame `store.transaction` gives back holds
+   each symbol's object by its reference (CAP-315), and `Visitors.OfPattern` says a frame's members are the visitors of
+   the objects it binds, but nothing public gives the visitor of what a `References.OfObject` designates within a
+   transaction already open: `References._designated` does, privately, and a map whose symbol is given the reference
+   runs in a transaction of its own, which cannot be opened within the one the procedure writes in (transactions do
+   not nest). *Route:* within the frame's store's transaction, from the singleton the reference's path starts at,
+   through each ownership entry by its keys (`Plain.ToPlain` of the reference, `store.singleton`, each adjacency's
+   entries and their links), a schema object being presented as itself, as a frame holds it (XF-03, XF-10). It needs
+   no schema-aware code, but it repeats what the executor does, and it reaches only objects owned from a singleton.
+   *Asked of mbse-schemas:* a public resolution within a transaction, such as `store.designated(reference)`.
+2. **No `Visitors.OfPattern` is made.** The protocol is defined, but the executor gives back `Transactions.Frame`s,
+   bindings and assignments, and nothing presents one as a `Visitors.OfPattern`. *Route:* the application presents
+   each frame itself, its pattern as the frame's store holds it by name, its symbols as members, refused once the
+   application ends (XF-03, XF-09).
+3. **No pattern evaluated for a frame within an open transaction.** Whether a prototype still holds for a frame is
+   asked of the executor, a map whose symbols are given the frame's references followed by a map of the pattern, which
+   needs a transaction of its own on the frame's store. *Route:* falsification is verified after the frames commit;
+   where it fails, no certificate is written, and the sync keeps what the procedure wrote, a copy for the caller to
+   discard (XF-07). *Asked of mbse-schemas:* evaluating a pattern for a frame within a transaction, or a savepoint
+   that a check can roll back.
+4. **No read-only transaction.** Nothing opens a transaction that refuses writes, or tells whether an open
+   transaction wrote, so a procedure's write to its source cannot be refused when it is made. *Route:* the source's
+   transaction is always rolled back, so the source is never disturbed, but a write to it is dropped silently, not
+   refused (XF-04).
+5. **A keyed adjacency given a mapping inserts a second entry under a key held.** In an imperative update,
+   `store.shelf.Shelf(shelf, lambda s: s.items({"nut": lambda e: e.item(lambda i: i.name("nut"))}))` run twice leaves
+   two entries keyed `"nut"` in a relation whose `unique` clause is `["shelf", "key"]`, and the commit does not refuse
+   them. *Route:* none needed here; the XF cases' procedures write each key once.
+6. **A snapshot of a schema that declares parameters is not read back the same.** In a store with `Parametrics`
+   installed, a pattern declaring a parameter (`.parameters([txn.Parametrics.OfParameters(...)])`), written by
+   `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
+   without parameters round-trips exactly. *Route:* XF-06 reads the certificates back from the snapshot and compares
+   what they hold, not the snapshot's bytes.
+
 ---
 
 <!-- nav -->

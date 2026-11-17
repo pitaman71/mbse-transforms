@@ -2,9 +2,10 @@
 
 mbse-transforms builds transforms over [mbse-schemas](https://github.com/pitaman71/mbse-schemas) data: rewrites of
 models applied one decision at a time, each a prototype (a pattern), a procedure (native code for now) over up to three
-frames (source, sync and target, each a `Visitors.OfPattern`) and certificates that record every application. No
-transform is built yet: the repository holds its conventions, its [charter](docs/proposals/charter/README.md), and its
-first release is proposed in [PR #3](https://github.com/pitaman71/mbse-transforms/pull/3). It is built Python first;
+frames (source, sync and target, each a `Visitors.OfPattern`) and certificates that record every application. Its
+first release ([the proposal](docs/proposals/first-release/README.md)) is built in stages: transforms, procedures,
+their application and the certificates are built in Python (`mbse.Transforms.Transforms`, suite XF); the session and
+reruns follow. It is built Python first;
 TypeScript follows as a later stage. Two equivalent implementations exist: `python3/` (`mbse.Transforms`) and `typescript5/` (`@mbse/transforms`).
 
 ## Start here
@@ -14,7 +15,7 @@ TypeScript follows as a later stage. Two equivalent implementations exist: `pyth
 | Know why the mbse repositories exist, and this one's part in them | [Why the mbse repositories exist](MBSE.md) |
 | Use the library | The skill, written once: [its source](skills/mbse-transforms/SKILL.md), packaged in each language as [the Python copy](python3/mbse/Transforms/skill/SKILL.md) and [the TypeScript copy](typescript5/skill/SKILL.md). Each practice links its case in each language's tutorials or tests |
 | Learn it by example | [The Python tutorial](python3/tutorials/README.md); the same in [the TypeScript tutorial](typescript5/tutorials/README.md) |
-| Understand the design, a capability not yet built or a decision | mbse-basis [FEA-021: every generation ambiguity a parameter](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-021.md), and its capabilities' detail files, [CAP-074: transforms applied step by step](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-074.md) to [CAP-083: policies with guards and distributions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-083.md); then the [charter](docs/proposals/charter/README.md) and the first-release proposal ([PR #3](https://github.com/pitaman71/mbse-transforms/pull/3)) |
+| Understand the design, a capability not yet built or a decision | mbse-basis [FEA-021: every generation ambiguity a parameter](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-021.md), and its capabilities' detail files, [CAP-074: transforms applied step by step](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-074.md) to [CAP-083: policies with guards and distributions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-083.md); then the [charter](docs/proposals/charter/README.md) and [the first-release proposal](docs/proposals/first-release/README.md) |
 | Change the package | this file, then [Equivalence](docs/EQUIVALENCE.md) |
 | Find or add a test case | [Test plan](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 

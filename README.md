@@ -16,11 +16,15 @@ and a target built anew); and certificates that record each application, under a
 sequence. Its packages are `mbse.Transforms` in Python and `@mbse/transforms` in TypeScript, one library in two
 languages, built Python first.
 
-Built so far: the repository's conventions alone (both packages, the skill, the notebook test suites and the tutorials'
-frame), with no transforms yet. Why it exists and what it is to be are in [its charter](docs/proposals/charter/README.md);
-its first release is proposed, for review, in
-[the first-release proposal](https://github.com/pitaman71/mbse-transforms/pull/3). The TypeScript package follows the
-Python one as a later stage.
+Built so far, in Python: the repository's conventions (both packages, the skill, the notebook test suites and the
+tutorials' frame), and the first release's second stage, `mbse.Transforms.Transforms`: a transform's model, installed
+as mbse-schemas data (`Transforms.install`, `Transforms.define`); procedures registered by name
+(`Transforms.Procedures`); the application of a transform to up to three frames already bound (`Transforms.apply`),
+verified by falsification or by a metric where asked; and the history, transform and frame certificates it writes and
+links, in a store of their own. The session, its candidates and policies, and reruns follow. Why it exists and what it
+is to be are in [its charter](docs/proposals/charter/README.md), and its first release in
+[the first-release proposal](docs/proposals/first-release/README.md), with the gaps in mbse-schemas that building it
+found. The TypeScript package follows the Python one as a later stage.
 
 ## Getting started
 
@@ -47,7 +51,7 @@ uv run coverage run -m pytest && uv run coverage combine && uv run coverage repo
 
 | Read | For |
 |---|---|
-| [Charter](docs/proposals/charter/README.md), [the first-release proposal](https://github.com/pitaman71/mbse-transforms/pull/3) | Why it exists, what it is to be, and its first release, for review |
+| [Charter](docs/proposals/charter/README.md), [the first-release proposal](docs/proposals/first-release/README.md) | Why it exists, what it is to be, and its first release, with the gaps found building it |
 | mbse-basis [FEA-021: every generation ambiguity a parameter](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-021.md) | The feature it builds, and its capabilities' detail files |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-transforms/SKILL.md) | Guidance for AI agents. The skill also ships inside both packages |

@@ -24,8 +24,12 @@ added as a row of a table: its concern, each language's way, why, and the cases 
 
 Every case, a tutorial step's or a test's, has a twin in the other language with the same ID and anchor, except those
 listed here, which test what only one language has. The skill may link them in that language alone; SKL-03 accepts each
-listed here as having no twin, and no other, and SKL-04 counts each for that language alone. There are none yet. A case
-added in one language alone is listed here, in a table of its cases (each in backticks), its language and why.
+listed here as having no twin, and no other, and SKL-04 counts each for that language alone. A case added in one
+language alone is listed here, in a table of its cases (each in backticks), its language and why.
+
+| Cases | Language | Why |
+|---|---|---|
+| `XF-01`, `XF-02`, `XF-03`, `XF-04`, `XF-05`, `XF-06`, `XF-07`, `XF-08`, `XF-09`, `XF-10` | Python | Python first, as the user decided ([the first release](proposals/first-release/README.md#decided), Decided, 1): the TypeScript package gains the `Transforms` module, and these cases their twins, in a stage of its own, which removes this row |
 
 ---
 
