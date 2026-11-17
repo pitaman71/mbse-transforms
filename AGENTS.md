@@ -6,8 +6,10 @@ to three arguments the caller makes (source, sync and target, each a `Visitors.O
 assignments, and certificates that record every application. Its first release
 ([the proposal](docs/proposals/first-release/README.md)) is built in stages: transforms, procedures, their application
 and the certificates (suite XF), and candidates from a frame stream, ranked by a policy (suite SES), are built in
-Python (`mbse.Transforms.Transforms`); reruns follow. It is built Python first;
-TypeScript follows as a later stage. Two equivalent implementations exist: `python3/` (`mbse.Transforms`) and `typescript5/` (`@mbse/transforms`).
+Python (`mbse.Transforms.Transforms`) and TypeScript (`@mbse/transforms`' `Transforms`); reruns and diffs are queries
+over the certificates, with no code of its own (suite RRN). It is built Python first, TypeScript following each stage
+with the same cases, and the certificates the same bytes in both (suite CONF, [the conformance corpus](conformance/README.md)).
+Two equivalent implementations exist: `python3/` (`mbse.Transforms`) and `typescript5/` (`@mbse/transforms`).
 
 ## Start here
 
@@ -51,6 +53,9 @@ uv run coverage run -m pytest && uv run coverage combine && uv run coverage repo
 
 cd typescript5 && nvm use && npm install        # TypeScript: Node 22 or later
 npm run coverage                                # type-checks, runs every notebook, gates at 100%
+
+(cd python3 && uv run python tests/conformance.py) # after a deliberate change to the certificates: both corpora,
+(cd typescript5 && npm run conformance)            # which CONF-02 checks are byte-identical
 
 sh skills/sync.sh                               # after changing the skill: copies it into both packages
 python3 ../mbse-basis/scripts/update_doc_links.py  # after adding, renaming or retitling a document

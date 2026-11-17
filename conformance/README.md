@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md)
+[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python package →](../python3/README.md)
 
 # Conformance corpus
 
@@ -24,4 +24,4 @@ Regenerate, after a deliberate change:
 ---
 
 <!-- nav -->
-[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md)
+[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python package →](../python3/README.md)

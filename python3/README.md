@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python test plan →](tests/TestPlan.md)
+[← Conformance corpus](../conformance/README.md) · [Home](../README.md) · [Python test plan →](tests/TestPlan.md)
 
 # mbse-transforms (Python)
 
@@ -8,4 +8,4 @@ The Python implementation of [mbse-transforms](../README.md): `mbse.Transforms`,
 ---
 
 <!-- nav -->
-[← Equivalence](../docs/EQUIVALENCE.md) · [Home](../README.md) · [Python test plan →](tests/TestPlan.md)
+[← Conformance corpus](../conformance/README.md) · [Home](../README.md) · [Python test plan →](tests/TestPlan.md)

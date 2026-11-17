@@ -135,7 +135,7 @@ As the user decided, on the questions as posed:
 
 What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
-route taken meanwhile (the cases are suites XF's, SES' and RRN's). Stage 4 found none more: a map's spec matches a
+route taken meanwhile (the cases are suites XF's, SES' and RRN's, in both languages). Stage 4 found none more: a map's spec matches a
 certificate's value properties, a `References.OfObject`, a `References.OfFrame` and the parameter assignments, by
 equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found takes the first gap's route.
 
@@ -159,6 +159,12 @@ equality of the whole value (RRN-03), so reruns and diffs are queries; reading w
    `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
    without parameters round-trips exactly. *Route:* XF-06 reads the certificates back from the snapshot and compares
    what they hold, not the snapshot's bytes.
+4. **A value made from plain data within a visitor's callback lives by that visitor's transaction in TypeScript, not
+   in Python.** Found porting the suites to TypeScript (stages 1 to 4): `Plain.FromPlain(store)(schema, plain)` called
+   within `member.as_object(callback)` gives in Python a value a later transaction's spec takes, and in TypeScript one
+   refused there, "a visitor lives only within the transaction that made it". *Route:* RRN's TypeScript helper `held`
+   makes the value after the callback returns ([Equivalence](../../EQUIVALENCE.md#gaps-found)). *Asked of
+   mbse-schemas:* the same life in both languages for a value made from plain data.
 
 ---
 
