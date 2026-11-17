@@ -70,11 +70,12 @@ and skill practices, the same cases in both languages.
      ([FEA-027: mutations as queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-027.md)),
      data held by the transform.
    - (b) A rewrite is code, a function given the store, the match and the arguments, as in the precursor.
-   - **Decided: (a)** (the user, 2026-11-05, accepting the recommendation). "No model should need code to read or write. Ever."
-     ([PRI-018: no model needs code to read or write](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-018)).
-     A rewrite as data can be traced, undone and inverted
+   - **Decided: (a)** (the user, accepting the recommendation). A rewrite as data can be traced, undone and inverted
      ([CAP-079: steps undone](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-079.md),
      [CAP-080: invertible transforms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-080.md)).
+     [CAP-282: no model needs bespoke schema-aware code to read or write](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-282),
+     "No model should need bespoke schema-aware code to read or write. Use mbse-schemas built-in serialization support.", as the user worded it, does not require data rewrites: a rewrite written as code that
+     reads and writes through mbse-schemas' built-in support needs no bespoke schema-aware code.
      Against it: the executor evaluates no expression yet (Risks), and whether mbse-codegen-python's rewrites can all
      be written so is to be checked.
 3. **Reruns in the first release?** Reruns that reuse earlier decisions, with orphans and trace diffs (CAP-076).
