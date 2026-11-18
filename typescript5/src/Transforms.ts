@@ -149,7 +149,7 @@ export function install(txn: any): any {
         (t: any) => t.name("prototype").relation([_.HasPrototype]).me("transform"),
       ]),
       (_: any) => _.HasPrototype.name("Transforms.HasPrototype").links([
-        (t: any) => t.name("transform"), (t: any) => t.name("pattern")]).uniques([["transform"]]),
+        (t: any) => t.name("transform"), (t: any) => t.name("pattern")]).uniques([["pattern"]]),
       // --- The history certificate: a sequence of transform certificates, and who decided each ---
       (_: any) => _.Histories.name("Transforms.Histories").ref(true).singleton("Transforms.TheHistories")
         .adjacencies({ histories: (t: any) => t.relation([_.HoldsHistory]).me("directory") }),
@@ -166,7 +166,7 @@ export function install(txn: any): any {
         ["history", "index"], ["step"]]),
       (_: any) => _.Decided.name("Transforms.Decided").links([
         (t: any) => t.name("history"), (t: any) => t.name("step")]).properties({
-        by: S.OfStr }).uniques([["step"]]), // who decided the step's parameters: the caller's word
+        by: S.OfStr }).uniques([["history", "by"]]), // who decided the step's parameters: the caller's word
       // --- The transform certificate: one application ---
       (_: any) => _.TransformCertificate.name("Transforms.TransformCertificate").ref(true).properties({
         transform: txn.References.OfObject, // the transform applied
@@ -194,7 +194,7 @@ export function install(txn: any): any {
         (t: any) => t.name("preceding").relation([_.Preceded]).me("frame"),
       ]),
       (_: any) => _.Preceded.name("Transforms.Preceded").links([
-        (t: any) => t.name("frame"), (t: any) => t.name("step")]).uniques([["frame"]]),
+        (t: any) => t.name("frame"), (t: any) => t.name("step")]).uniques([["step"]]),
     ])]))]);
 }
 

@@ -1672,7 +1672,7 @@
                             "set": {
                               "value": [
                                 [
-                                  "transform"
+                                  "pattern"
                                 ]
                               ]
                             }
@@ -2605,7 +2605,8 @@
                             "set": {
                               "value": [
                                 [
-                                  "step"
+                                  "history",
+                                  "by"
                                 ]
                               ]
                             }
@@ -4334,7 +4335,7 @@
                             "set": {
                               "value": [
                                 [
-                                  "frame"
+                                  "step"
                                 ]
                               ]
                             }
