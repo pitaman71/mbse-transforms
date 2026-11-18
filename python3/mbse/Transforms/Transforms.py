@@ -156,7 +156,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("prototype").relation([_.HasPrototype]).me("transform"),
             ]),
             lambda _: _.HasPrototype.name("Transforms.HasPrototype").links([
-                lambda t: t.name("transform"), lambda t: t.name("pattern")]).uniques([["transform"]]),
+                lambda t: t.name("transform"), lambda t: t.name("pattern")]).uniques([["pattern"]]),
             # --- The history certificate: a sequence of transform certificates, and who decided each ---
             lambda _: _.Histories.name("Transforms.Histories").ref(True).singleton("Transforms.TheHistories")
             .adjacencies({"histories": lambda t: t.relation([_.HoldsHistory]).me("directory")}),
@@ -173,7 +173,7 @@ def install(txn: Any) -> Any:
                 ["history", "index"], ["step"]]),
             lambda _: _.Decided.name("Transforms.Decided").links([
                 lambda t: t.name("history"), lambda t: t.name("step")]).properties({
-                "by": S.OfStr}).uniques([["step"]]),  # who decided the step's parameters: the caller's word
+                "by": S.OfStr}).uniques([["history", "by"]]),  # who decided the step's parameters: the caller's word
             # --- The transform certificate: one application ---
             lambda _: _.TransformCertificate.name("Transforms.TransformCertificate").ref(True).properties({
                 "transform": txn.References.OfObject,  # the transform applied
@@ -201,7 +201,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("preceding").relation([_.Preceded]).me("frame"),
             ]),
             lambda _: _.Preceded.name("Transforms.Preceded").links([
-                lambda t: t.name("frame"), lambda t: t.name("step")]).uniques([["frame"]]),
+                lambda t: t.name("frame"), lambda t: t.name("step")]).uniques([["step"]]),
         ])]))])
 
 

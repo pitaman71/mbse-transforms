@@ -9,7 +9,7 @@ description = "Rewrites of mbse-schemas models applied step by step, every decis
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-schemas>=0.28.0,<0.29",
+    "mbse-schemas>=0.30.1,<0.31",
 ]
 
 [tool.setuptools.packages.find]
