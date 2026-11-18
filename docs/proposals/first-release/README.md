@@ -150,13 +150,19 @@ equality of the whole value (RRN-03), so reruns and diffs are queries; reading w
    what reading a certificate a query found takes, is not given it. *Route:* the tests, playing the caller, find each
    object within a transaction of their own from the singleton its object reference starts at, through each ownership
    entry by its keys (`python3/tests/support.py`), which reads what CAP-132 makes internal to an object reference.
-   *Asked of mbse-schemas:* a frame stream consumed within its transaction, each frame given as a `Visitors.OfPattern`;
-   nothing then resolves a reference.
+   *Asked of mbse-schemas:* the frame transducer, a mutation kind of its own, whose callback is given a transaction's
+   frame stream, each frame a `Visitors.OfPattern`, and gives a (possibly empty) frame stream back
+   ([the transaction-object proposal, Decided](https://github.com/pitaman71/mbse-schemas/blob/main/docs/proposals/transaction-object/README.md#decided),
+   the user's answers to questions 3 and 5); nothing then resolves a reference. What its callback is given, how it is
+   written as a mutation kind and what of it is not delegated across mbse-rest are open there (question 6);
+   `txn.query` is not proposed.
 2. **A keyed adjacency given a mapping inserts a second entry under a key held.** In an imperative update,
    `store.shelf.Shelf(shelf, lambda s: s.items({"nut": lambda e: e.item(lambda i: i.name("nut"))}))` run twice leaves
    two entries keyed `"nut"` in a relation whose `unique` clause is `["shelf", "key"]`, and the commit does not refuse
-   them. *Route:* none needed here; the cases' procedures write each key once. A fix is proposed in mbse-schemas
-   ([PR #53](https://github.com/pitaman71/mbse-schemas/pull/53)).
+   them. *Route:* none needed here; the cases' procedures write each key once. *Fixed* in mbse-schemas 0.30.0
+   ([PR #53](https://github.com/pitaman71/mbse-schemas/pull/53)): a transaction that leaves two entries agreeing on the
+   key of any `unique` clause and differing on the clause is refused at commit, and no entry held is removed to make
+   room.
 3. **A snapshot of a schema that declares parameters is not read back the same.** In a store with `Parametrics`
    installed, a pattern declaring a parameter (`.parameters([txn.Parametrics.OfParameters(...)])`), written by
    `Plain.ToPlain(store).Snapshot()` and read into a new store, is written again in another order, though a pattern
