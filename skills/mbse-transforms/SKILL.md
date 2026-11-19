@@ -40,7 +40,7 @@ For the data transforms rewrite, use the
 1. **Depend on one version, in either language.** *Why*: `mbse.Transforms` in Python and `@mbse/transforms` in
    TypeScript are one library, which carry one version, the contract
    ([PRI-031: the version is the contract](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-031)); below 1.0 every minor may
-   break. *When*: adding it as a dependency. *How*: require its minor range (`>=0.1.0,<0.2`) and import its one module,
+   break. *When*: adding it as a dependency. *How*: require its minor range (`>=0.2.0,<0.3`) and import its one module,
    `Transforms` (Python: `from mbse.Transforms import Transforms`; TypeScript:
    `import { Transforms } from "@mbse/transforms"`).
    - Python: [PKG-01: Both packages carry one version, and the package loads](mbse:mbse-transforms/python3/tests/01_Package.ipynb#PKG-01) · TypeScript: [PKG-01: Both packages carry one version, and the package loads](mbse:mbse-transforms/typescript5/tests/01_Package.ipynb#PKG-01)
