@@ -1,6 +1,6 @@
 {
   "name": "@mbse/transforms",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Rewrites of mbse-schemas models applied step by step, every decision a parameter recorded in certificates (TypeScript implementation)",
   "type": "module",
   "private": true,
