@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-transforms"
-version = "0.2.0"
+version = "0.3.0"
 description = "Rewrites of mbse-schemas models applied step by step, every decision a parameter recorded in certificates"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mbse-schemas>=0.32.0,<0.33",
+    "mbse-schemas>=0.34.0,<0.35",
 ]
 
 [tool.setuptools.packages.find]
