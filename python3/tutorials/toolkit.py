@@ -2,8 +2,9 @@
 
 `shelf`, `patterns`, `model` and `items` are the shelf and its prototype, as case study 1 writes them. `Frame`,
 `resolve` and `bear` make the caller's `Visitors.OfPattern` from a frame a store's query gave back: mbse-schemas gives
-a query's frames back after its transaction ends, each binding object references, not visitors (the first-release
-proposal, Gaps found, 1), so the caller finds each object again within a transaction of its own.
+a query's frames back after its transaction ends, each its journal, whose symbols bind object references, not
+visitors (the first-release proposal, Gaps found, 1), so the caller finds each object again within a transaction of
+its own.
 """
 
 from __future__ import annotations
@@ -105,13 +106,13 @@ def resolve(store: Any, reference: Any) -> Any:
 
 def bear(store: Any, pattern: str, frame: Mapping[str, Any]) -> Frame:
     """The `Visitors.OfPattern` bearing a frame a query of the store gave back, a frame of the pattern named `pattern`,
-    within the store's transaction."""
+    within the store's transaction: each of its bindings, the object reference its journal's symbol holds, resolved."""
     return Frame(store.registered(pattern), {symbol: resolve(store, reference) for symbol, reference in frame.items()})
 
 
 def frames(store: Any, pattern: str) -> list[Any]:
     """The frames of the pattern named `pattern` in the store: a query (a `map`), whose frames `store.transaction`
-    gives back."""
+    gives back, each its journal (`Transactions.Frame`), its bindings read from it by symbol as object references."""
     held = store.registered(pattern)
     return store.transaction(lambda t: t.mutations([lambda mu: mu.map(lambda m: m.symbols([held]))]))
 

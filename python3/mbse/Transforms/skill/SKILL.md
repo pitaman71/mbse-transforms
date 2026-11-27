@@ -41,7 +41,7 @@ For the data transforms rewrite, use the
    TypeScript are one library, which carry one version, the contract
    ([PRI-031: the version is the contract](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-031)); a later version of the
    same major is compatible, below 1.0 too. *When*: adding it as a dependency. *How*: require its range
-   (`>=0.3.1,<1.0`) and import its one module,
+   (`>=0.4.0,<1.0`) and import its one module,
    `Transforms` (Python: `from mbse.Transforms import Transforms`; TypeScript:
    `import { Transforms } from "@mbse/transforms"`).
    - Python: [PKG-01: Both packages carry one version, and the package loads](mbse:mbse-transforms/python3/tests/01_Package.ipynb#PKG-01) · TypeScript: [PKG-01: Both packages carry one version, and the package loads](mbse:mbse-transforms/typescript5/tests/01_Package.ipynb#PKG-01)
@@ -131,7 +131,9 @@ For the data transforms rewrite, use the
    back), and map over the certificates' store: the history by its name (`Transforms.TheHistories`' `histories`), its
    `steps`' transform certificate whose `transform` equals the transform's reference, and its `frames`'
    sub-certificate whose `frame` equals the frame; a spec matches a value property by equality of the whole value, so
-   give a frame's bindings only, never a witness. A frame binds by object reference, so a store remade with the same
+   give a frame's bindings only, a mapping of its symbols, whose reference is a journal of its symbols alone, as
+   `certify` records it; never a frame a query gave back, whose journal holds its id and what its path referenced or
+   changed. A frame binds by object reference, so a store remade with the same
    owners and keys is queried by its own frames. To rerun, read the parameter assignments the certificate found
    recorded, within a transaction, and apply and certify with them, giving `by` as, say, "reused"; where the query
    finds none, decide as for a new frame. To diff, list each history's certificates by the same map, look each up in

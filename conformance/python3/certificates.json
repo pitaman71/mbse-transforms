@@ -5146,19 +5146,23 @@
                           {
                             "set": {
                               "value": {
-                                "binds": {
-                                  "i": {
-                                    "path": {
-                                      "singleton": "shelf.TheShelf",
-                                      "next": {
-                                        "entry": {
-                                          "i": "items",
-                                          "o": "shelf",
-                                          "properties": {
-                                            "key": "bolt"
-                                          },
+                                "journal": {
+                                  "symbols": {
+                                    "i": {
+                                      "reference": {
+                                        "path": {
+                                          "singleton": "shelf.TheShelf",
                                           "next": {
-                                            "target": {}
+                                            "entry": {
+                                              "i": "items",
+                                              "o": "shelf",
+                                              "properties": {
+                                                "key": "bolt"
+                                              },
+                                              "next": {
+                                                "target": {}
+                                              }
+                                            }
                                           }
                                         }
                                       }
@@ -5219,19 +5223,23 @@
                           {
                             "set": {
                               "value": {
-                                "binds": {
-                                  "i": {
-                                    "path": {
-                                      "singleton": "shelf.TheShelf",
-                                      "next": {
-                                        "entry": {
-                                          "i": "items",
-                                          "o": "shelf",
-                                          "properties": {
-                                            "key": "nut"
-                                          },
+                                "journal": {
+                                  "symbols": {
+                                    "i": {
+                                      "reference": {
+                                        "path": {
+                                          "singleton": "shelf.TheShelf",
                                           "next": {
-                                            "target": {}
+                                            "entry": {
+                                              "i": "items",
+                                              "o": "shelf",
+                                              "properties": {
+                                                "key": "nut"
+                                              },
+                                              "next": {
+                                                "target": {}
+                                              }
+                                            }
                                           }
                                         }
                                       }
