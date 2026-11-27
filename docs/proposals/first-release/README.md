@@ -139,17 +139,19 @@ As the user decided, on the questions as posed:
 What building it found missing in mbse-schemas 0.28.0, each reported, not worked around
 ([PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)), and the
 route taken meanwhile (the cases are suites XF's, SES' and RRN's, in both languages). Stage 4 found none more: a map's spec matches a
-certificate's value properties, a `References.OfObject`, a `References.OfFrame` and the parameter assignments, by
-equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found takes the first gap's route.
+certificate's value properties, a `References.OfObject`, a `References.OfFrame` (since mbse-schemas 0.38.0, its
+journal) and the parameter assignments, by equality of the whole value (RRN-03), so reruns and diffs are queries; reading what a query found takes the first gap's route.
 
 1. **A query's frame stream cannot be consumed within the transaction that makes it.** A query's result is a frame
    stream, and `Visitors.OfPattern` is a frame's own protocol, "its symbols are members, each a `Visitors.OfObject` of
    the object it binds ... Frames are made by the executor of mutation expressions". But `store.transaction` gives the
-   stream back after its transaction ends, when no visitor may live (CAP-315), so each frame holds object references and
-   the property values named, never the frame as a `Visitors.OfPattern`: what a caller applies a transform with, and
-   what reading a certificate a query found takes, is not given it. *Route:* the tests, playing the caller, find each
-   object within a transaction of their own from the singleton its object reference starts at, through each ownership
-   entry by its keys (`python3/tests/support.py`), which reads what CAP-132 makes internal to an object reference.
+   stream back after its transaction ends, when no visitor may live (CAP-315), so each frame is its journal (since
+   mbse-schemas 0.38.0, a `Changes.Transaction`): its symbols the frame's bindings, each an object reference, read from
+   it by symbol (`frame["i"]`), and its changes what its path referenced or changed; never the frame as a
+   `Visitors.OfPattern`: what a caller applies a transform with, and what reading a certificate a query found takes, is
+   not given it. *Route:* the tests, playing the caller, find each object within a transaction of their own from the
+   singleton its object reference starts at, through each ownership entry by its keys (`python3/tests/support.py`; the
+   tutorials' `bear`), which reads what CAP-132 makes internal to an object reference.
    *Asked of mbse-schemas:* the frame transducer, a mutation kind of its own, whose callback is given a transaction's
    frame stream, each frame a `Visitors.OfPattern`, and gives a (possibly empty) frame stream back
    ([the transaction-object proposal, Decided](https://github.com/pitaman71/mbse-schemas/blob/main/docs/proposals/transaction-object/README.md#decided),

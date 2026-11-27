@@ -2,8 +2,9 @@
  *
  * `shelf`, `patterns`, `model` and `items` are the shelf and its prototype, as case study 1 writes them. `Frame`,
  * `resolve` and `bear` make the caller's `Visitors.OfPattern` from a frame a store's query gave back: mbse-schemas gives
- * a query's frames back after its transaction ends, each binding object references, not visitors (the first-release
- * proposal, Gaps found, 1), so the caller finds each object again within a transaction of its own.
+ * a query's frames back after its transaction ends, each its journal, whose symbols bind object references, not
+ * visitors (the first-release proposal, Gaps found, 1), so the caller finds each object again within a transaction of
+ * its own.
  */
 
 import { Builders, Parametrics, Plain } from "@mbse/schemas/Framework";
@@ -102,13 +103,13 @@ export function resolve(store: any, reference: any): any {
 }
 
 /** The `Visitors.OfPattern` bearing a frame a query of the store gave back, a frame of the pattern named `pattern`,
- * within the store's transaction. */
+ * within the store's transaction: each of its bindings, the object reference its journal's symbol holds, resolved. */
 export function bear(store: any, pattern: string, frame: Map<string, any>): Frame {
   return new Frame(store.registered(pattern), new Map([...frame].map(([symbol, reference]) => [symbol, resolve(store, reference)])));
 }
 
 /** The frames of the pattern named `pattern` in the store: a query (a `map`), whose frames `store.transaction` gives
- * back. */
+ * back, each its journal (`Transactions.Frame`), its bindings read from it by symbol as object references. */
 export function frames(store: any, pattern: string): Map<string, any>[] {
   const held = store.registered(pattern);
   return store.transaction((t: any) => t.mutations([(mu: any) => mu.map((m: any) => m.symbols([held]))]));

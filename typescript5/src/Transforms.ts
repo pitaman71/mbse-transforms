@@ -37,9 +37,10 @@
  *   - a **sub-certificate**, `Transforms.FrameCertificate`, one "for the source, sync, and target (whichever are
  *     present)", owned by its transform certificate under its argument, linking "to the corresponding pattern instance and
  *     to the preceding transform for that pattern on the same history": the frame its argument's visitor bore
- *     (`frame`, a `References.OfFrame` value), the pattern it is a frame of, read from the visitor by `as_schema()`
- *     (`pattern`, a `References.OfObject` value *(agent)*), and the preceding transform certificate for that pattern
- *     instance on the same history (`preceding`, `Transforms.Preceded`), where there is one.
+ *     (`frame`, a `References.OfFrame` value: its journal, a `Changes.Transaction` whose symbols are the frame's
+ *     bindings, as mbse-schemas 0.38 has a frame be its journal), the pattern it is a frame of, read from the visitor
+ *     by `as_schema()` (`pattern`, a `References.OfObject` value *(agent)*), and the preceding transform certificate for
+ *     that pattern instance on the same history (`preceding`, `Transforms.Preceded`), where there is one.
  *
  * A **procedure** is a native function registered by name in a `Procedures` registry, called with the caller's visitors
  * and the parameter assignments, and that's that: `procedure(source, sync, target, assignments)`, each visitor or null.
@@ -66,7 +67,9 @@
  *   transforms' store, as the arguments are.
  * - **A sub-certificate's pattern instance is read from its visitor when `certify` is called**: each symbol of the
  *   visitor's pattern (`as_schema()`), its member's reference (`References.of`), in the store the first member is in;
- *   the frame's bindings only, as `References.of` gives them for a map.
+ *   the frame's bindings only, as `References.of` gives them for a map: a journal whose symbols are its
+ *   bindings, each an object by its reference, with no changes, since the caller's visitor carries no journal of its
+ *   own.
  * - **The assignments are given to the procedure read-only**, so that the certificate records what it was given.
  * - **The preceding transform for a pattern instance** is the latest earlier transform certificate on the same history
  *   with a sub-certificate whose `pattern` and `frame` are equal as values (mbse-schemas' `Comparison`), whatever its
